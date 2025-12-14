@@ -7,7 +7,7 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=100..900&display=swap" rel="stylesheet">
     <style>
         /* カスタムスタイル: モバイルでの視認性向上とダークテーマの調整 */
         :root {
@@ -68,24 +68,37 @@
             }
         }
 
-        /* モンスターアイコンのスタイル */
-        .monster-icon {
+        /* モンスターアイコンのコンテナスタイル */
+        .monster-icon-container {
             width: 40px;
             height: 40px;
             border-radius: 50%;
+            overflow: hidden; /* 画像を丸くクリップ */
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: bold;
-            color: white;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-            cursor: pointer;
-            transition: transform 0.1s, box-shadow 0.1s;
+            border: 2px solid transparent; /* 初期ボーダー */
+        }
+        .monster-icon-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
-        .monster-icon:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        /* 選択ボタンのスタイル */
+        .monster-select-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 40px;
+            padding: 0 10px;
+            border-radius: 0.5rem;
+            text-align: center;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .monster-select-btn:hover {
+            transform: scale(1.02);
         }
 
         /* モーダル背景 */
@@ -138,34 +151,46 @@
                 <!-- 父親系統 -->
                 <div class="space-y-3 p-3 bg-gray-700 rounded-lg">
                     <p class="font-medium text-lg text-yellow-300 border-b border-gray-600 pb-2">父親系統</p>
-                    <div class="flex flex-col space-y-2">
-                        <label class="text-sm font-light text-gray-400">父親</label>
-                        <button id="select-father" class="monster-icon-placeholder bg-blue-600 p-2 rounded-lg text-sm transition-colors hover:bg-blue-700" data-target="P1">未選択 (P1)</button>
+                    <div class="flex items-center space-x-2">
+                        <div class="monster-icon-container" id="icon-P1">
+                            <span class="text-sm font-bold text-white">?</span>
+                        </div>
+                        <button id="select-father" class="monster-select-btn bg-blue-600 p-2 rounded-lg text-sm transition-colors hover:bg-blue-700 flex-grow" data-target="P1">父親を選択</button>
                     </div>
-                    <div class="flex flex-col space-y-2">
-                        <label class="text-sm font-light text-gray-400">祖父 (父側)</label>
-                        <button id="select-gfather1" class="monster-icon-placeholder bg-blue-600 p-2 rounded-lg text-sm transition-colors hover:bg-blue-700" data-target="Gf1">未選択 (Gf1)</button>
+                    <div class="flex items-center space-x-2">
+                         <div class="monster-icon-container" id="icon-Gf1">
+                            <span class="text-sm font-bold text-white">?</span>
+                        </div>
+                        <button id="select-gfather1" class="monster-select-btn bg-blue-600 p-2 rounded-lg text-sm transition-colors hover:bg-blue-700 flex-grow" data-target="Gf1">祖父 (父側)を選択</button>
                     </div>
-                    <div class="flex flex-col space-y-2">
-                        <label class="text-sm font-light text-gray-400">祖母 (父側)</label>
-                        <button id="select-gmother1" class="monster-icon-placeholder bg-blue-600 p-2 rounded-lg text-sm transition-colors hover:bg-blue-700" data-target="Gm1">未選択 (Gm1)</button>
+                    <div class="flex items-center space-x-2">
+                         <div class="monster-icon-container" id="icon-Gm1">
+                            <span class="text-sm font-bold text-white">?</span>
+                        </div>
+                        <button id="select-gmother1" class="monster-select-btn bg-blue-600 p-2 rounded-lg text-sm transition-colors hover:bg-blue-700 flex-grow" data-target="Gm1">祖母 (父側)を選択</button>
                     </div>
                 </div>
 
                 <!-- 母親系統 -->
                 <div class="space-y-3 p-3 bg-gray-700 rounded-lg">
                     <p class="font-medium text-lg text-pink-300 border-b border-gray-600 pb-2">母親系統</p>
-                    <div class="flex flex-col space-y-2">
-                        <label class="text-sm font-light text-gray-400">母親</label>
-                        <button id="select-mother" class="monster-icon-placeholder bg-purple-600 p-2 rounded-lg text-sm transition-colors hover:bg-purple-700" data-target="P2">未選択 (P2)</button>
+                    <div class="flex items-center space-x-2">
+                        <div class="monster-icon-container" id="icon-P2">
+                            <span class="text-sm font-bold text-white">?</span>
+                        </div>
+                        <button id="select-mother" class="monster-select-btn bg-purple-600 p-2 rounded-lg text-sm transition-colors hover:bg-purple-700 flex-grow" data-target="P2">母親を選択</button>
                     </div>
-                    <div class="flex flex-col space-y-2">
-                        <label class="text-sm font-light text-gray-400">祖父 (母側)</label>
-                        <button id="select-gfather2" class="monster-icon-placeholder bg-purple-600 p-2 rounded-lg text-sm transition-colors hover:bg-purple-700" data-target="Gf2">未選択 (Gf2)</button>
+                    <div class="flex items-center space-x-2">
+                        <div class="monster-icon-container" id="icon-Gf2">
+                            <span class="text-sm font-bold text-white">?</span>
+                        </div>
+                        <button id="select-gfather2" class="monster-select-btn bg-purple-600 p-2 rounded-lg text-sm transition-colors hover:bg-purple-700 flex-grow" data-target="Gf2">祖父 (母側)を選択</button>
                     </div>
-                    <div class="flex flex-col space-y-2">
-                        <label class="text-sm font-light text-gray-400">祖母 (母側)</label>
-                        <button id="select-gmother2" class="monster-icon-placeholder bg-purple-600 p-2 rounded-lg text-sm transition-colors hover:bg-purple-700" data-target="Gm2">未選択 (Gm2)</button>
+                    <div class="flex items-center space-x-2">
+                         <div class="monster-icon-container" id="icon-Gm2">
+                            <span class="text-sm font-bold text-white">?</span>
+                        </div>
+                        <button id="select-gmother2" class="monster-select-btn bg-purple-600 p-2 rounded-lg text-sm transition-colors hover:bg-purple-700 flex-grow" data-target="Gm2">祖母 (母側)を選択</button>
                     </div>
                 </div>
             </div>
@@ -238,25 +263,26 @@
         // 1. データ定義 (メンテナンス性のためにここに集約)
         // =================================================================
 
-        // モンスター名とアイコンデータ (便宜上、色とイニシャルを使用)
+        // モンスター名とアイコンデータ
+        // NOTE: GitHub Pagesを想定し、相対パス（image/モンスター名.png）に修正しました。
+        // 実際にご利用の際は、このパスに画像を配置してください。
         const MONSTERS = [
-            { name: "ピクシー", short: "PI", color: "#f87171" }, // Red
-            { name: "ドラゴン", short: "DR", color: "#3b82f6" }, // Blue
-            { name: "ケンタウロス", short: "KE", color: "#10b981" }, // Green
-            { name: "モノリス", short: "MO", color: "#f59e0b" }, // Amber
-            { name: "ライガー", short: "RA", color: "#a855f7" }, // Violet
-            { name: "ヘンガー", short: "HE", color: "#34d399" }, // Emerald
-            { name: "デュラハン", short: "DU", color: "#475569" }, // Slate
-            { name: "スエゾー", short: "SU", color: "#f472b6" }, // Pink
-            { name: "ナーガ", short: "NA", color: "#60a5fa" }, // Light Blue
-            { name: "ガリ", short: "GA", color: "#fb7185" }  // Rose
+            { name: "ピクシー", short: "PI", color: "#f87171", imageUrl: "image/ピクシー.png" },
+            { name: "ドラゴン", short: "DR", color: "#3b82f6", imageUrl: "image/ドラゴン.png" },
+            { name: "ケンタウロス", short: "KE", color: "#10b981", imageUrl: "image/ケンタウロス.png" },
+            { name: "モノリス", short: "MO", color: "#f59e0b", imageUrl: "image/モノリス.png" },
+            { name: "ライガー", short: "RA", color: "#a855f7", imageUrl: "image/ライガー.png" },
+            { name: "ヘンガー", short: "HE", color: "#34d399", imageUrl: "image/ヘンガー.png" },
+            { name: "デュラハン", short: "DU", color: "#475569", imageUrl: "image/デュラハン.png" },
+            { name: "スエゾー", short: "SU", color: "#f472b6", imageUrl: "image/スエゾー.png" },
+            { name: "ナーガ", short: "NA", color: "#60a5fa", imageUrl: "image/ナーガ.png" },
+            { name: "ガリ", short: "GA", color: "#fb7185", imageUrl: "image/ガリ.png" }
         ];
         const MONSTER_NAMES = MONSTERS.map(m => m.name);
 
         // 基礎相性値テーブル (Younger Generation : Older Generation)
         // キー: 若い世代 (子/親) の名前
         // 値: { 古い世代 (親/祖父母) の名前 : 相性値 }
-        // ユーザー提供の例データに基づき、テーブルを拡張して定義します。
         const BASE_COMPATIBILITY = {
             "ピクシー": { "ピクシー": 16, "ドラゴン": 14.5, "ケンタウロス": 20.5, "モノリス": 18, "ライガー": 22, "ヘンガー": 17, "デュラハン": 19, "スエゾー": 15, "ナーガ": 16, "ガリ": 21 },
             "ドラゴン": { "ピクシー": 15, "ドラゴン": 16, "ケンタウロス": 27, "モノリス": 20, "ライガー": 18, "ヘンガー": 25, "デュラハン": 15, "スエゾー": 23, "ナーガ": 21, "ガリ": 19 },
@@ -268,7 +294,6 @@
             "スエゾー": { "ピクシー": 22, "ドラゴン": 17.5, "ケンタウロス": 19, "モノリス": 24, "ライガー": 16, "ヘンガー": 20, "デュラハン": 23, "スエゾー": 16, "ナーガ": 15, "ガリ": 17 },
             "ナーガ": { "ピクシー": 19, "ドラゴン": 24, "ケンタウロス": 15, "モノリス": 17, "ライガー": 21, "ヘンガー": 18.5, "デュラハン": 25, "スエゾー": 20, "ナーガ": 16, "ガリ": 14.5 },
             "ガリ": { "ピクシー": 14, "ドラゴン": 18, "ケンタウロス": 22, "モノリス": 15.5, "ライガー": 19, "ヘンガー": 24, "デュラハン": 17, "スエゾー": 21, "ナーガ": 23, "ガリ": 16 },
-            // ... モンスターが増えた場合はここに追加 ...
         };
 
         // =================================================================
@@ -276,16 +301,9 @@
         // =================================================================
 
         // 選択された6体のモンスターの状態
-        // P1: 父親, Gf1: 父親の祖父, Gm1: 父親の祖母
-        // P2: 母親, Gf2: 母親の祖父, Gm2: 母親の祖母
         const state = {
-            P1: null,
-            Gf1: null,
-            Gm1: null,
-            P2: null,
-            Gf2: null,
-            Gm2: null,
-            // モーダルで現在選択中のターゲット
+            P1: null, Gf1: null, Gm1: null,
+            P2: null, Gf2: null, Gm2: null,
             currentSelectionTarget: null,
         };
 
@@ -295,30 +313,24 @@
 
         /**
          * 秘伝/加算値の調整ボタンの処理
-         * @param {string} id - input要素のID ('secret3' or 'secret2')
-         * @param {number} delta - 調整する数値
          */
         function adjustValue(id, delta) {
             const input = document.getElementById(id);
             let currentValue = parseInt(input.value) || 0;
             let newValue = currentValue + delta;
 
-            // 秘伝の個数にマイナス値が入らないようにする
             if (id !== 'noble-add') {
                 if (newValue < 0) newValue = 0;
             }
             
-            // 最大値の簡易的な制約 (ゲーム仕様に合わせて調整可能)
             if (id === 'secret3' && newValue > 6) newValue = 6;
             if (id === 'secret2' && newValue > 12) newValue = 12;
 
             input.value = newValue;
-            // 値が変わったら自動で再計算をトリガーしても良いが、ここではボタンクリックに任せる
         }
 
         /**
          * モーダルを開く
-         * @param {string} targetKey - stateのキー (P1, Gf1, ...)
          */
         function openModal(targetKey) {
             state.currentSelectionTarget = targetKey;
@@ -352,7 +364,6 @@
 
         /**
          * モンスターが選択された時の処理
-         * @param {string} monsterName - 選択されたモンスター名
          */
         function selectMonster(monsterName) {
             if (!state.currentSelectionTarget) return;
@@ -360,14 +371,28 @@
             // 状態を更新
             state[state.currentSelectionTarget] = monsterName;
 
-            // UIを更新
+            // UIを更新 (ボタンとアイコンコンテナ)
             const targetButton = document.querySelector(`[data-target="${state.currentSelectionTarget}"]`);
+            const iconContainer = document.getElementById(`icon-${state.currentSelectionTarget}`);
             const monsterData = MONSTERS.find(m => m.name === monsterName);
             
-            if (targetButton && monsterData) {
-                targetButton.textContent = monsterName;
-                targetButton.style.backgroundColor = monsterData.color;
-                targetButton.classList.add('font-semibold');
+            if (targetButton && iconContainer && monsterData) {
+                // ボタンのテキスト更新
+                let parentType = '';
+                if (state.currentSelectionTarget === 'P1') parentType = '父親';
+                else if (state.currentSelectionTarget === 'P2') parentType = '母親';
+                else if (state.currentSelectionTarget.includes('f')) parentType = '祖父';
+                else if (state.currentSelectionTarget.includes('m')) parentType = '祖母';
+
+                targetButton.textContent = `${monsterName} (${parentType})`;
+                targetButton.classList.add('font-semibold', 'text-sm');
+
+                // アイコンの更新 (<img>タグを挿入)
+                // ローカルファイル参照を試みる。失敗時はイニシャルにフォールバック。
+                iconContainer.innerHTML = `<img src="${monsterData.imageUrl}" alt="${monsterName} icon" class="monster-icon-img" 
+                    onerror="this.parentNode.innerHTML='<span class=\\'text-sm font-bold text-white\\' style=\\'background-color: ${monsterData.color}; padding: 0.5rem; border-radius: 50%;\\'>${monsterData.short}</span>'; this.parentNode.style.backgroundColor='transparent';" />`;
+                iconContainer.style.border = '2px solid #3b82f6'; // 選択されたことを示す
+                iconContainer.classList.remove('bg-gray-700');
             }
 
             // モーダルを閉じる
@@ -381,10 +406,6 @@
 
         /**
          * 基礎相性値を取得するヘルパー関数
-         * 若い世代(Younger)から古い世代(Older)への相性値を取得します。
-         * @param {string} youngerName - 若い世代のモンスター名
-         * @param {string} olderName - 古い世代のモンスター名
-         * @returns {number} - 基礎相性値 (見つからない場合は0を返す)
          */
         function getBaseComp(youngerName, olderName) {
             const youngerData = BASE_COMPATIBILITY[youngerName];
@@ -402,32 +423,26 @@
 
         /**
          * 相性値の計算を実行する関数
-         * @param {string} childName - 育成対象（子）のモンスター名
-         * @param {Object} selectedMonsters - 選択された6体のモンスターオブジェクト (P1, Gf1, ...)
-         * @param {number} secret3Count - 共通秘伝Ⅲの数
-         * @param {number} secret2Count - 共通秘伝Ⅱの数
-         * @param {number} nobleAdd - ノーブル加算値
-         * @returns {number} - 計算された最終相性値
          */
         function calculateCompValue(childName, selectedMonsters, secret3Count, secret2Count, nobleAdd) {
             const { P1, Gf1, Gm1, P2, Gf2, Gm2 } = selectedMonsters;
 
             // 基礎相性値のパーツ
-            const comp_C_P1 = getBaseComp(childName, P1); // 子：父親
-            const comp_P1_Gf1 = getBaseComp(P1, Gf1);     // 父親：祖父 (父側)
-            const comp_C_Gf1 = getBaseComp(childName, Gf1); // 子：祖父 (父側)
-            const comp_P1_Gm1 = getBaseComp(P1, Gm1);     // 父親：祖母 (父側)
-            const comp_C_Gm1 = getBaseComp(childName, Gm1); // 子：祖母 (父側)
+            const comp_C_P1 = getBaseComp(childName, P1);
+            const comp_P1_Gf1 = getBaseComp(P1, Gf1);
+            const comp_C_Gf1 = getBaseComp(childName, Gf1);
+            const comp_P1_Gm1 = getBaseComp(P1, Gm1);
+            const comp_C_Gm1 = getBaseComp(childName, Gm1);
 
-            const comp_C_P2 = getBaseComp(childName, P2); // 子：母親
-            const comp_P2_Gf2 = getBaseComp(P2, Gf2);     // 母親：祖父 (母側)
-            const comp_C_Gf2 = getBaseComp(childName, Gf2); // 子：祖父 (母側)
-            const comp_P2_Gm2 = getBaseComp(P2, Gm2);     // 母親：祖母 (母側)
-            const comp_C_Gm2 = getBaseComp(childName, Gm2); // 子：祖母 (母側)
+            const comp_C_P2 = getBaseComp(childName, P2);
+            const comp_P2_Gf2 = getBaseComp(P2, Gf2);
+            const comp_C_Gf2 = getBaseComp(childName, Gf2);
+            const comp_P2_Gm2 = getBaseComp(P2, Gm2);
+            const comp_C_Gm2 = getBaseComp(childName, Gm2);
 
-            const comp_P1_P2 = getBaseComp(P1, P2);     // 父親：母親
+            const comp_P1_P2 = getBaseComp(P1, P2);
 
-            // 相性値の計算式 (ユーザー提供の数式を実装)
+            // 相性値の計算式
             let totalComp = 0;
 
             // 1. 父側ライン
@@ -454,8 +469,6 @@
 
         /**
          * 相性値に基づいて相性シンボルを決定する関数
-         * @param {number} value - 相性値
-         * @returns {{symbol: string, class: string}} - シンボルとTailwind CSSクラス
          */
         function getCompSymbol(value) {
             if (value >= 660) return { symbol: '👑', class: 'symbol-crown text-3xl' };
@@ -481,7 +494,12 @@
                 const button = document.createElement('button');
                 button.className = 'flex flex-col items-center p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors';
                 button.innerHTML = `
-                    <div class="monster-icon mb-1" style="background-color: ${m.color};">${m.short}</div>
+                    <div class="monster-icon-container mb-1">
+                        <!-- GitHub Pagesデプロイ後、同階層のimageフォルダから画像をロードする -->
+                        <img src="${m.imageUrl}" alt="${m.name} icon" class="monster-icon-img"
+                            onerror="this.parentNode.innerHTML='<span class=\\'text-sm font-bold text-white\\' style=\\'background-color: ${m.color}; padding: 0.5rem; border-radius: 50%;\\'>${m.short}</span>'; this.parentNode.style.backgroundColor='transparent';"
+                        >
+                    </div>
                     <span class="text-xs font-medium text-white">${m.name}</span>
                 `;
                 button.onclick = () => selectMonster(m.name);
@@ -489,7 +507,7 @@
             });
 
             // モンスター選択ボタンにイベントリスナーを設定
-            document.querySelectorAll('.monster-icon-placeholder').forEach(button => {
+            document.querySelectorAll('.monster-select-btn').forEach(button => {
                 button.addEventListener('click', () => openModal(button.dataset.target));
             });
 
@@ -506,9 +524,8 @@
                     return;
                 }
                 
-                // 基礎相性値テーブルに選択したモンスターが存在しない場合のチェック
                 const allSelected = requiredMonsters.map(key => state[key]);
-                const unknownMonster = allSelected.find(name => !BASE_COMPATIBILITY[name] || !BASE_COMPATIBILITY[name][name]); // 自分のデータも確認
+                const unknownMonster = allSelected.find(name => !BASE_COMPATIBILITY[name] || !BASE_COMPATIBILITY[name][name]);
 
                 if (unknownMonster) {
                     errorMessage.textContent = `エラー: 選択されたモンスター「${unknownMonster}」の基礎相性データがテーブルに見つかりません。`;
@@ -536,7 +553,6 @@
                             nobleAdd
                         );
                         
-                        // 相性シンボルを取得
                         const { symbol, class: symbolClass } = getCompSymbol(compValue);
                         
                         results.push({
@@ -548,7 +564,6 @@
                         });
                     } catch (e) {
                         console.error(`Calculation failed for ${childName}:`, e);
-                        // 個別の計算エラーは無視して続行
                     }
                 });
 
@@ -556,7 +571,7 @@
                 results.sort((a, b) => b.value - a.value);
 
                 // 5. 結果をレンダリング
-                resultList.innerHTML = ''; // リストをクリア
+                resultList.innerHTML = '';
 
                 if (results.length === 0) {
                     resultList.innerHTML = '<p class="col-span-full text-center text-gray-500 mt-8">計算結果がありませんでした。</p>';
@@ -567,7 +582,12 @@
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'flex flex-col items-center bg-gray-700 p-3 rounded-lg shadow-md hover:bg-gray-600 transition-colors cursor-default border border-gray-600';
                     itemDiv.innerHTML = `
-                        <div class="monster-icon mb-2" style="background-color: ${res.monsterData.color};">${res.monsterData.short}</div>
+                        <div class="monster-icon-container mb-2 w-10 h-10">
+                             <!-- GitHub Pagesデプロイ後、同階層のimageフォルダから画像をロードする -->
+                            <img src="${res.monsterData.imageUrl}" alt="${res.name} icon" class="monster-icon-img" 
+                                onerror="this.parentNode.innerHTML='<span class=\\'text-sm font-bold text-white\\' style=\\'background-color: ${res.monsterData.color}; padding: 0.5rem; border-radius: 50%;\\'>${res.monsterData.short}</span>'; this.parentNode.style.backgroundColor='transparent';"
+                            >
+                        </div>
                         <span class="text-sm font-semibold text-white truncate w-full text-center">${res.name}</span>
                         <div class="flex items-center space-x-1 mt-1">
                             <span class="text-base font-bold text-indigo-300">${res.value.toFixed(1)}</span>
@@ -577,11 +597,6 @@
                     resultList.appendChild(itemDiv);
                 });
             });
-
-            // 初期ロード時の状態設定 (デバッグ用)
-            // state.P1 = "ピクシー"; state.Gf1 = "ドラゴン"; state.Gm1 = "ケンタウロス";
-            // state.P2 = "モノリス"; state.Gf2 = "ライガー"; state.Gm2 = "ヘンガー";
-            // selectMonster('ピクシー'); // 初期表示のためにダミーで呼び出すか、ユーザー操作を待つ
         });
     </script>
 </body>
