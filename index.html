@@ -1,603 +1,335 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LINE モンスターファーム 相性シミュレーター</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=100..900&display=swap" rel="stylesheet">
-    <style>
-        /* カスタムスタイル: モバイルでの視認性向上とダークテーマの調整 */
-        :root {
-            --color-primary: #1e3a8a; /* Indigo 800 */
-            --color-accent: #3b82f6; /* Blue 500 */
-            --color-background: #111827; /* Gray 900 */
-            --color-surface: #1f2937; /* Gray 800 */
-            --color-text: #f3f4f6; /* Gray 100 */
-            --color-border: #374151; /* Gray 700 */
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--color-background);
-            color: var(--color-text);
-            /* スムーズなスクロール */
-            scroll-behavior: smooth;
-        }
-
-        /* iFrameのフルハイト調整 */
-        #iframe-container {
-            height: 80vh; /* ビューポートの80%をiFrameに割り当てる */
-            min-height: 400px;
-        }
-
-        /* スクロールバーの色をダークテーマに合わせる (Chrome/Edge/Safari) */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: var(--color-surface);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #4b5563; /* Gray 600 */
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #6b7280; /* Gray 500 */
-        }
-
-        /* 5列グリッドをモバイルで調整 */
-        .result-grid {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 8px;
-        }
-        /* モバイルでは3列に縮小 */
-        @media (max-width: 768px) {
-            .result-grid {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-        }
-        /* 非常に小さい画面では2列に縮小 */
-        @media (max-width: 480px) {
-            .result-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-        }
-
-        /* モンスターアイコンのコンテナスタイル */
-        .monster-icon-container {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            overflow: hidden; /* 画像を丸くクリップ */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-            border: 2px solid transparent; /* 初期ボーダー */
-        }
-        .monster-icon-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        /* 選択ボタンのスタイル */
-        .monster-select-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 40px;
-            padding: 0 10px;
-            border-radius: 0.5rem;
-            text-align: center;
-            transition: transform 0.1s, box-shadow 0.1s;
-        }
-        .monster-select-btn:hover {
-            transform: scale(1.02);
-        }
-
-        /* モーダル背景 */
-        .modal-overlay {
-            background-color: rgba(0, 0, 0, 0.7);
-        }
-
-        /* ボタンのホバーエフェクト */
-        .control-button {
-            transition: background-color 0.2s, transform 0.1s;
-        }
-        .control-button:active {
-            transform: scale(0.95);
-        }
-
-        /* 相性シンボルの色付け */
-        .symbol-x { color: #f87171; /* Red 400 */ }
-        .symbol-triangle { color: #fbbf24; /* Amber 400 */ }
-        .symbol-circle { color: #34d399; /* Emerald 400 */ }
-        .symbol-double-circle { color: #3b82f6; /* Blue 500 */ }
-        .symbol-star { color: #facc15; /* Yellow 400 */ }
-        .symbol-crown { color: #a78bfa; /* Violet 400 */ }
-
-    </style>
+    <title>Monster Farm Sim</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="p-4 sm:p-6 md:p-8">
 
-    <!-- iFrame埋め込みエリア -->
-    <section id="iframe-section" class="mb-8">
-        <h1 class="text-3xl font-bold text-center mb-4 text-white">LINE MF シミュレーター埋め込み</h1>
-        <div id="iframe-container" class="w-full rounded-xl overflow-hidden shadow-2xl border border-gray-700">
-            <iframe
-                src="https://monster-farm-simulator.onrender.com"
-                frameborder="0"
-                class="w-full h-full"
-                title="外部シミュレーター"
-            ></iframe>
-        </div>
-    </section>
+<body>
 
-    <!-- 相性検索ツールエリア -->
-    <section id="tool-section" class="bg-gray-800 p-4 sm:p-6 rounded-xl shadow-2xl border border-gray-700">
-        <h2 class="text-2xl font-bold text-center mb-6 text-indigo-400">相性検索ツール</h2>
+    <header>
+        <h1>MF Sim</h1>
+    </header>
 
-        <!-- 1. モンスター選択エリア -->
-        <div id="monster-selection" class="mb-8 p-4 bg-gray-900 rounded-lg border border-gray-700">
-            <h3 class="text-xl font-semibold mb-3 text-indigo-300">① 育成系統の選択 (6体)</h3>
-            <div class="grid grid-cols-2 gap-4">
+    <main>
+        <!-- Feature 1: Gift & Tyrant -->
+        <section id="tab-gift" class="active">
+            <div class="iframe-container">
+                <iframe src="https://monster-farm-simulator.onrender.com" title="MF Simulator"></iframe>
+            </div>
 
-                <!-- 父親系統 -->
-                <div class="space-y-3 p-3 bg-gray-700 rounded-lg">
-                    <p class="font-medium text-lg text-yellow-300 border-b border-gray-600 pb-2">父親系統</p>
-                    <div class="flex items-center space-x-2">
-                        <div class="monster-icon-container" id="icon-P1">
-                            <span class="text-sm font-bold text-white">?</span>
-                        </div>
-                        <button id="select-father" class="monster-select-btn bg-blue-600 p-2 rounded-lg text-sm transition-colors hover:bg-blue-700 flex-grow" data-target="P1">父親を選択</button>
+            <div class="feature-title">ギフトン＆タイラント</div>
+
+            <!-- 1. Parents Input First -->
+            <div class="input-group">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="margin-bottom:10px;">親・祖父母を指定</label>
+                    <button onclick="resetInputs('gift')"
+                        style="font-size:0.75rem; padding:4px 8px; background:#444; border:none; color:#eee; border-radius:4px; cursor:pointer;">リセット</button>
+                </div>
+
+                <div class="parent-grid-row">
+                    <div class="parent-label">父親側</div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">父親</div>
+                        <div class="monster-btn large placeholder" data-slot="gf_f" onclick="openMonsterModal('gf_f')">
+                            選択</div>
                     </div>
-                    <div class="flex items-center space-x-2">
-                         <div class="monster-icon-container" id="icon-Gf1">
-                            <span class="text-sm font-bold text-white">?</span>
-                        </div>
-                        <button id="select-gfather1" class="monster-select-btn bg-blue-600 p-2 rounded-lg text-sm transition-colors hover:bg-blue-700 flex-grow" data-target="Gf1">祖父 (父側)を選択</button>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖父</div>
+                        <div class="monster-btn large placeholder" data-slot="gf_ff"
+                            onclick="openMonsterModal('gf_ff')">選択</div>
                     </div>
-                    <div class="flex items-center space-x-2">
-                         <div class="monster-icon-container" id="icon-Gm1">
-                            <span class="text-sm font-bold text-white">?</span>
-                        </div>
-                        <button id="select-gmother1" class="monster-select-btn bg-blue-600 p-2 rounded-lg text-sm transition-colors hover:bg-blue-700 flex-grow" data-target="Gm1">祖母 (父側)を選択</button>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖母</div>
+                        <div class="monster-btn large placeholder" data-slot="gf_fm"
+                            onclick="openMonsterModal('gf_fm')">選択</div>
                     </div>
                 </div>
 
-                <!-- 母親系統 -->
-                <div class="space-y-3 p-3 bg-gray-700 rounded-lg">
-                    <p class="font-medium text-lg text-pink-300 border-b border-gray-600 pb-2">母親系統</p>
-                    <div class="flex items-center space-x-2">
-                        <div class="monster-icon-container" id="icon-P2">
-                            <span class="text-sm font-bold text-white">?</span>
-                        </div>
-                        <button id="select-mother" class="monster-select-btn bg-purple-600 p-2 rounded-lg text-sm transition-colors hover:bg-purple-700 flex-grow" data-target="P2">母親を選択</button>
+                <div class="parent-grid-row">
+                    <div class="parent-label">母親側</div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">母親</div>
+                        <div class="monster-btn large placeholder" data-slot="gf_m" onclick="openMonsterModal('gf_m')">
+                            選択</div>
                     </div>
-                    <div class="flex items-center space-x-2">
-                        <div class="monster-icon-container" id="icon-Gf2">
-                            <span class="text-sm font-bold text-white">?</span>
-                        </div>
-                        <button id="select-gfather2" class="monster-select-btn bg-purple-600 p-2 rounded-lg text-sm transition-colors hover:bg-purple-700 flex-grow" data-target="Gf2">祖父 (母側)を選択</button>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖父</div>
+                        <div class="monster-btn large placeholder" data-slot="gf_mf"
+                            onclick="openMonsterModal('gf_mf')">選択</div>
                     </div>
-                    <div class="flex items-center space-x-2">
-                         <div class="monster-icon-container" id="icon-Gm2">
-                            <span class="text-sm font-bold text-white">?</span>
-                        </div>
-                        <button id="select-gmother2" class="monster-select-btn bg-purple-600 p-2 rounded-lg text-sm transition-colors hover:bg-purple-700 flex-grow" data-target="Gm2">祖母 (母側)を選択</button>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖母</div>
+                        <div class="monster-btn large placeholder" data-slot="gf_mm"
+                            onclick="openMonsterModal('gf_mm')">選択</div>
                     </div>
                 </div>
+
             </div>
-        </div>
 
-        <!-- 2. 検索条件入力エリア -->
-        <div id="condition-input" class="mb-8 p-4 bg-gray-900 rounded-lg border border-gray-700">
-            <h3 class="text-xl font-semibold mb-4 text-indigo-300">② 検索条件の入力</h3>
-
-            <!-- 共通秘伝Ⅲ -->
-            <div class="flex items-center justify-between mb-4">
-                <label for="secret3" class="text-base font-medium text-gray-300 w-1/3">共通秘伝Ⅲの数</label>
-                <div class="flex items-center w-2/3 space-x-1">
-                    <button class="control-button bg-red-600 hover:bg-red-700 text-white rounded-l-lg px-2 py-1 text-lg" onclick="adjustValue('secret3', -5)">-5</button>
-                    <button class="control-button bg-red-400 hover:bg-red-500 text-white px-2 py-1 text-lg" onclick="adjustValue('secret3', -1)">-1</button>
-                    <input type="number" id="secret3" value="0" min="0" max="6" class="w-full text-center p-2 rounded-sm bg-gray-700 border-gray-600 focus:ring-blue-500 focus:border-blue-500 appearance-none text-white text-lg">
-                    <button class="control-button bg-green-400 hover:bg-green-500 text-white px-2 py-1 text-lg" onclick="adjustValue('secret3', 1)">+1</button>
-                    <button class="control-button bg-green-600 hover:bg-green-700 text-white rounded-r-lg px-2 py-1 text-lg" onclick="adjustValue('secret3', 5)">+5</button>
+            <!-- 2. Items Second -->
+            <div class="input-group">
+                <label>共通秘伝・加算値</label>
+                <div style="margin-top:10px;">
+                    <label>共通秘伝III (<span id="v3-val">0</span>個)</label>
+                    <input type="range" id="secret3" min="0" max="20" value="0"
+                        oninput="document.getElementById('v3-val').innerText = this.value">
                 </div>
-            </div>
-
-            <!-- 共通秘伝Ⅱ -->
-            <div class="flex items-center justify-between mb-4">
-                <label for="secret2" class="text-base font-medium text-gray-300 w-1/3">共通秘伝Ⅱの数</label>
-                <div class="flex items-center w-2/3 space-x-1">
-                    <button class="control-button bg-red-600 hover:bg-red-700 text-white rounded-l-lg px-2 py-1 text-lg" onclick="adjustValue('secret2', -5)">-5</button>
-                    <button class="control-button bg-red-400 hover:bg-red-500 text-white px-2 py-1 text-lg" onclick="adjustValue('secret2', -1)">-1</button>
-                    <input type="number" id="secret2" value="0" min="0" max="12" class="w-full text-center p-2 rounded-sm bg-gray-700 border-gray-600 focus:ring-blue-500 focus:border-blue-500 appearance-none text-white text-lg">
-                    <button class="control-button bg-green-400 hover:bg-green-500 text-white px-2 py-1 text-lg" onclick="adjustValue('secret2', 1)">+1</button>
-                    <button class="control-button bg-green-600 hover:bg-green-700 text-white rounded-r-lg px-2 py-1 text-lg" onclick="adjustValue('secret2', 5)">+5</button>
+                <div style="margin-top:10px;">
+                    <label>共通秘伝II (<span id="v2-val">0</span>個)</label>
+                    <input type="range" id="secret2" min="0" max="20" value="0"
+                        oninput="document.getElementById('v2-val').innerText = this.value">
+                </div>
+                <div style="margin-top:10px;">
+                    <label>ノーブル加算値 (<span id="noble-val">0</span>)</label>
+                    <input type="range" id="noble" min="0" max="300" value="0"
+                        oninput="document.getElementById('noble-val').innerText = this.value">
                 </div>
             </div>
 
-            <!-- ノーブル加算 -->
-            <div class="flex items-center justify-between">
-                <label for="noble-add" class="text-base font-medium text-gray-300 w-1/3">ノーブル加算</label>
-                <input type="number" id="noble-add" value="0" class="w-2/3 text-center p-2 rounded-lg bg-gray-700 border border-gray-600 focus:ring-blue-500 focus:border-blue-500 text-white text-lg">
+            <button class="action-btn" onclick="runGiftSearch()">相性計算 / 一覧表示</button>
+
+            <div id="gift-results" class="result-grid">
+                <!-- Results will be injected here -->
+            </div>
+        </section>
+
+        <!-- Feature 2: Optimization -->
+        <section id="tab-optimize">
+            <div class="feature-title">最適化探索</div>
+
+            <div class="input-group">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label>育成モンスター (子)</label>
+                    <button onclick="resetInputs('opt')"
+                        style="font-size:0.75rem; padding:4px 8px; background:#444; border:none; color:#eee; border-radius:4px; cursor:pointer;">リセット</button>
+                </div>
+                <div class="monster-selector-row">
+                    <div class="monster-btn large placeholder" data-slot="opt_child"
+                        onclick="openMonsterModal('opt_child')">選択</div>
+                </div>
             </div>
 
-            <button id="calculate-btn" class="mt-6 w-full py-3 bg-indigo-500 text-white font-bold rounded-lg shadow-lg hover:bg-indigo-600 transition-colors text-xl">
-                相性値を計算・ランキング表示
-            </button>
-        </div>
-
-        <!-- 3. 結果表示エリア -->
-        <div id="results" class="p-4 bg-gray-900 rounded-lg border border-gray-700 min-h-32">
-            <h3 class="text-xl font-semibold mb-4 text-indigo-300">③ 相性値ランキング</h3>
-            <div id="error-message" class="text-red-400 mb-4 hidden"></div>
-            <div id="result-list" class="result-grid">
-                <!-- 結果はここに表示されます -->
-                <p class="col-span-full text-center text-gray-500 mt-8">⬆️ 上の項目を選択・入力し、「計算」ボタンを押してください。</p>
+            <div class="input-group">
+                <label>除外モンスター</label>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <button class="action-btn"
+                        style="background:#444; font-size:0.9rem; width:auto; padding:8px 15px; margin-top:0;"
+                        onclick="openExclusionModal()">設定を開く</button>
+                    <div id="exclusion-count-opt" style="font-size:0.8rem; color:#aaa;">0体 除外中</div>
+                </div>
+                <div id="exclusion-icons-opt" class="excluded-list"></div>
             </div>
-        </div>
 
-    </section>
-
-    <!-- モンスター選択モーダル -->
-    <div id="monster-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50 modal-overlay">
-        <div class="bg-gray-800 p-6 rounded-xl shadow-3xl max-w-lg w-11/12 max-h-[90vh] overflow-y-auto border border-indigo-500">
-            <h3 class="text-2xl font-bold mb-4 text-indigo-400" id="modal-title">モンスターを選択</h3>
-            <div id="monster-list" class="grid grid-cols-4 sm:grid-cols-5 gap-3">
-                <!-- モンスターアイコンがJavaScriptで挿入されます -->
+            <div class="input-group">
+                <label>目標相性シンボル</label>
+                <select id="target-symbol"
+                    style="width:100%; padding:10px; background:#333; color:white; border:1px solid #555;">
+                    <option value="999">指定なし (最大値を探索)</option>
+                    <option value="660">👑 (660~)</option>
+                    <option value="614">☆ (614~)</option>
+                    <option value="490">◎ (490~)</option>
+                </select>
             </div>
-            <button class="mt-6 w-full py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-500" onclick="closeModal()">閉じる</button>
+
+            <button class="action-btn" onclick="runOptimization()">最適化スタート</button>
+
+            <div id="opt-results"></div>
+        </section>
+
+        <!-- Feature 3: Completion Search (Renamed from Reverse Opt) -->
+        <section id="tab-reverse-opt">
+            <div class="feature-title">補完探索</div>
+            <div class="input-group">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label>育成モンスター (子)</label>
+                    <button onclick="resetInputs('rev')"
+                        style="font-size:0.75rem; padding:4px 8px; background:#444; border:none; color:#eee; border-radius:4px; cursor:pointer;">リセット</button>
+                </div>
+                <div class="monster-selector-row">
+                    <div class="monster-btn large placeholder" data-slot="rev_child"
+                        onclick="openMonsterModal('rev_child')">選択</div>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>除外モンスター</label>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <button class="action-btn"
+                        style="background:#444; font-size:0.9rem; width:auto; padding:8px 15px; margin-top:0;"
+                        onclick="openExclusionModal()">設定を開く</button>
+                    <div id="exclusion-count-rev" style="font-size:0.8rem; color:#aaa;">0体 除外中</div>
+                </div>
+                <div id="exclusion-icons-rev" class="excluded-list"></div>
+            </div>
+
+            <div class="input-group">
+                <label>目標相性シンボル</label>
+                <select id="target-symbol-rev"
+                    style="width:100%; padding:10px; background:#333; color:white; border:1px solid #555;">
+                    <option value="999">指定なし (最大値を探索)</option>
+                    <option value="660">👑 (660~)</option>
+                    <option value="614">☆ (614~)</option>
+                    <option value="490">◎ (490~)</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label style="margin-bottom:10px;">固定枠 (空欄は最適探索)</label>
+
+                <div class="parent-grid-row">
+                    <div class="parent-label">父親側</div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">父親</div>
+                        <div class="monster-btn placeholder" data-slot="rev_f" onclick="openMonsterModal('rev_f')">選択
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖父</div>
+                        <div class="monster-btn placeholder" data-slot="rev_ff" onclick="openMonsterModal('rev_ff')">選択
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖母</div>
+                        <div class="monster-btn placeholder" data-slot="rev_fm" onclick="openMonsterModal('rev_fm')">選択
+                        </div>
+                    </div>
+                </div>
+
+                <div class="parent-grid-row">
+                    <div class="parent-label">母親側</div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">母親</div>
+                        <div class="monster-btn placeholder" data-slot="rev_m" onclick="openMonsterModal('rev_m')">選択
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖父</div>
+                        <div class="monster-btn placeholder" data-slot="rev_mf" onclick="openMonsterModal('rev_mf')">選択
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖母</div>
+                        <div class="monster-btn placeholder" data-slot="rev_mm" onclick="openMonsterModal('rev_mm')">選択
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="action-btn" onclick="runReverseOpt()">補完探索</button>
+            <div id="rev-opt-results"></div>
+        </section>
+
+        <!-- Feature 4: General Reverse -->
+        <section id="tab-general">
+            <div class="feature-title">汎用逆引き探索</div>
+            <p style="font-size:0.8rem; color:#aaa; margin-bottom:10px;">
+                指定した4人の祖父母から、全モンスターとの最低相性が最大になる父母の組み合わせを探します。
+            </p>
+
+            <div class="input-group">
+                <label>除外モンスター</label>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <button class="action-btn"
+                        style="background:#444; font-size:0.9rem; width:auto; padding:8px 15px; margin-top:0;"
+                        onclick="openExclusionModal()">設定を開く</button>
+                    <div id="exclusion-count-gen" style="font-size:0.8rem; color:#aaa;">0体 除外中</div>
+                </div>
+                <div id="exclusion-icons-gen" class="excluded-list"></div>
+            </div>
+
+            <div class="input-group">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="margin-bottom:10px;">祖父母を指定</label>
+                    <button onclick="resetInputs('gen')"
+                        style="font-size:0.75rem; padding:4px 8px; background:#444; border:none; color:#eee; border-radius:4px; cursor:pointer;">リセット</button>
+                </div>
+
+                <div class="parent-grid-row">
+                    <div class="parent-label">父親側</div>
+                    <div></div> <!-- Spacer -->
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖父</div>
+                        <div class="monster-btn placeholder" data-slot="gen_ff" onclick="openMonsterModal('gen_ff')">選択
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖母</div>
+                        <div class="monster-btn placeholder" data-slot="gen_fm" onclick="openMonsterModal('gen_fm')">選択
+                        </div>
+                    </div>
+                </div>
+
+                <div class="parent-grid-row">
+                    <div class="parent-label">母親側</div>
+                    <div></div> <!-- Spacer -->
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖父</div>
+                        <div class="monster-btn placeholder" data-slot="gen_mf" onclick="openMonsterModal('gen_mf')">選択
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖母</div>
+                        <div class="monster-btn placeholder" data-slot="gen_mm" onclick="openMonsterModal('gen_mm')">選択
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="action-btn" onclick="runGeneralSearch()">汎用ペア探索</button>
+            <div id="gen-results" class="result-grid"></div>
+        </section>
+
+    </main>
+
+    <nav class="bottom-nav">
+        <a class="nav-item active" onclick="switchTab('tab-gift', this)">
+            <span class="nav-icon">🎁</span>
+            <span>Gift/Tyrant</span>
+        </a>
+        <a class="nav-item" onclick="switchTab('tab-optimize', this)">
+            <span class="nav-icon">✨</span>
+            <span>最適化</span>
+        </a>
+        <a class="nav-item" onclick="switchTab('tab-reverse-opt', this)">
+            <span class="nav-icon">🧩</span>
+            <span>補完探索</span>
+        </a>
+        <a class="nav-item" onclick="switchTab('tab-general', this)">
+            <span class="nav-icon">🔍</span>
+            <span>汎用</span>
+        </a>
+    </nav>
+
+    <!-- Modal -->
+    <div id="monster-modal" class="modal">
+        <div class="modal-content">
+            <h3>モンスター選択</h3>
+            <div id="modal-grid" class="modal-grid">
+                <!-- Injected via JS -->
+            </div>
+            <button class="modal-close" onclick="closeModal()">閉じる</button>
         </div>
     </div>
 
-    <script>
-        // =================================================================
-        // 1. データ定義 (メンテナンス性のためにここに集約)
-        // =================================================================
+    <!-- Exclusion Modal -->
+    <div id="exclusion-modal" class="modal">
+        <div class="modal-content">
+            <h3>除外モンスター設定</h3>
+            <p style="font-size:0.8rem; color:#aaa; margin-bottom:10px;">タップして除外/解除</p>
+            <div id="exclusion-grid" class="modal-grid">
+                <!-- Injected via JS -->
+            </div>
+            <button class="modal-close" onclick="closeExclusionModal()">完了</button>
+        </div>
+    </div>
 
-        // モンスター名とアイコンデータ
-        // NOTE: GitHub Pagesを想定し、相対パス（image/モンスター名.png）に修正しました。
-        // 実際にご利用の際は、このパスに画像を配置してください。
-        const MONSTERS = [
-            { name: "ピクシー", short: "PI", color: "#f87171", imageUrl: "image/ピクシー.png" },
-            { name: "ドラゴン", short: "DR", color: "#3b82f6", imageUrl: "image/ドラゴン.png" },
-            { name: "ケンタウロス", short: "KE", color: "#10b981", imageUrl: "image/ケンタウロス.png" },
-            { name: "モノリス", short: "MO", color: "#f59e0b", imageUrl: "image/モノリス.png" },
-            { name: "ライガー", short: "RA", color: "#a855f7", imageUrl: "image/ライガー.png" },
-            { name: "ヘンガー", short: "HE", color: "#34d399", imageUrl: "image/ヘンガー.png" },
-            { name: "デュラハン", short: "DU", color: "#475569", imageUrl: "image/デュラハン.png" },
-            { name: "スエゾー", short: "SU", color: "#f472b6", imageUrl: "image/スエゾー.png" },
-            { name: "ナーガ", short: "NA", color: "#60a5fa", imageUrl: "image/ナーガ.png" },
-            { name: "ガリ", short: "GA", color: "#fb7185", imageUrl: "image/ガリ.png" }
-        ];
-        const MONSTER_NAMES = MONSTERS.map(m => m.name);
-
-        // 基礎相性値テーブル (Younger Generation : Older Generation)
-        // キー: 若い世代 (子/親) の名前
-        // 値: { 古い世代 (親/祖父母) の名前 : 相性値 }
-        const BASE_COMPATIBILITY = {
-            "ピクシー": { "ピクシー": 16, "ドラゴン": 14.5, "ケンタウロス": 20.5, "モノリス": 18, "ライガー": 22, "ヘンガー": 17, "デュラハン": 19, "スエゾー": 15, "ナーガ": 16, "ガリ": 21 },
-            "ドラゴン": { "ピクシー": 15, "ドラゴン": 16, "ケンタウロス": 27, "モノリス": 20, "ライガー": 18, "ヘンガー": 25, "デュラハン": 15, "スエゾー": 23, "ナーガ": 21, "ガリ": 19 },
-            "ケンタウロス": { "ピクシー": 23, "ドラゴン": 27, "ケンタウロス": 16, "モノリス": 14, "ライガー": 20, "ヘンガー": 21, "デュラハン": 22, "スエゾー": 25, "ナーガ": 17, "ガリ": 16.5 },
-            "モノリス": { "ピクシー": 16.5, "ドラゴン": 15, "ケンタウロス": 20, "モノリス": 16, "ライガー": 23, "ヘンガー": 19, "デュラハン": 20, "スエゾー": 18, "ナーガ": 22, "ガリ": 15 },
-            "ライガー": { "ピクシー": 18, "ドラゴン": 19, "ケンタウロス": 15, "モノリス": 25, "ライガー": 16, "ヘンガー": 22, "デュラハン": 17, "スエゾー": 20.5, "ナーガ": 14, "ガリ": 25 },
-            "ヘンガー": { "ピクシー": 20, "ドラゴン": 21, "ケンタウロス": 23, "モノリス": 17, "ライガー": 15.5, "ヘンガー": 16, "デュラハン": 21, "スエゾー": 16, "ナーガ": 20, "ガリ": 18 },
-            "デュラハン": { "ピクシー": 17, "ドラゴン": 20, "ケンタウロス": 18, "モノリス": 21, "ライガー": 23, "ヘンガー": 15, "デュラハン": 16, "スエゾー": 19, "ナーガ": 18.5, "ガリ": 24 },
-            "スエゾー": { "ピクシー": 22, "ドラゴン": 17.5, "ケンタウロス": 19, "モノリス": 24, "ライガー": 16, "ヘンガー": 20, "デュラハン": 23, "スエゾー": 16, "ナーガ": 15, "ガリ": 17 },
-            "ナーガ": { "ピクシー": 19, "ドラゴン": 24, "ケンタウロス": 15, "モノリス": 17, "ライガー": 21, "ヘンガー": 18.5, "デュラハン": 25, "スエゾー": 20, "ナーガ": 16, "ガリ": 14.5 },
-            "ガリ": { "ピクシー": 14, "ドラゴン": 18, "ケンタウロス": 22, "モノリス": 15.5, "ライガー": 19, "ヘンガー": 24, "デュラハン": 17, "スエゾー": 21, "ナーガ": 23, "ガリ": 16 },
-        };
-
-        // =================================================================
-        // 2. 状態管理
-        // =================================================================
-
-        // 選択された6体のモンスターの状態
-        const state = {
-            P1: null, Gf1: null, Gm1: null,
-            P2: null, Gf2: null, Gm2: null,
-            currentSelectionTarget: null,
-        };
-
-        // =================================================================
-        // 3. UI操作関数
-        // =================================================================
-
-        /**
-         * 秘伝/加算値の調整ボタンの処理
-         */
-        function adjustValue(id, delta) {
-            const input = document.getElementById(id);
-            let currentValue = parseInt(input.value) || 0;
-            let newValue = currentValue + delta;
-
-            if (id !== 'noble-add') {
-                if (newValue < 0) newValue = 0;
-            }
-            
-            if (id === 'secret3' && newValue > 6) newValue = 6;
-            if (id === 'secret2' && newValue > 12) newValue = 12;
-
-            input.value = newValue;
-        }
-
-        /**
-         * モーダルを開く
-         */
-        function openModal(targetKey) {
-            state.currentSelectionTarget = targetKey;
-            const modal = document.getElementById('monster-modal');
-            const title = document.getElementById('modal-title');
-            
-            let titleText = "";
-            switch(targetKey) {
-                case 'P1': titleText = '父親'; break;
-                case 'Gf1': titleText = '祖父 (父側)'; break;
-                case 'Gm1': titleText = '祖母 (父側)'; break;
-                case 'P2': titleText = '母親'; break;
-                case 'Gf2': titleText = '祖父 (母側)'; break;
-                case 'Gm2': titleText = '祖母 (母側)'; break;
-            }
-            title.textContent = `${titleText}の選択`;
-
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        /**
-         * モーダルを閉じる
-         */
-        function closeModal() {
-            const modal = document.getElementById('monster-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            state.currentSelectionTarget = null;
-        }
-
-        /**
-         * モンスターが選択された時の処理
-         */
-        function selectMonster(monsterName) {
-            if (!state.currentSelectionTarget) return;
-
-            // 状態を更新
-            state[state.currentSelectionTarget] = monsterName;
-
-            // UIを更新 (ボタンとアイコンコンテナ)
-            const targetButton = document.querySelector(`[data-target="${state.currentSelectionTarget}"]`);
-            const iconContainer = document.getElementById(`icon-${state.currentSelectionTarget}`);
-            const monsterData = MONSTERS.find(m => m.name === monsterName);
-            
-            if (targetButton && iconContainer && monsterData) {
-                // ボタンのテキスト更新
-                let parentType = '';
-                if (state.currentSelectionTarget === 'P1') parentType = '父親';
-                else if (state.currentSelectionTarget === 'P2') parentType = '母親';
-                else if (state.currentSelectionTarget.includes('f')) parentType = '祖父';
-                else if (state.currentSelectionTarget.includes('m')) parentType = '祖母';
-
-                targetButton.textContent = `${monsterName} (${parentType})`;
-                targetButton.classList.add('font-semibold', 'text-sm');
-
-                // アイコンの更新 (<img>タグを挿入)
-                // ローカルファイル参照を試みる。失敗時はイニシャルにフォールバック。
-                iconContainer.innerHTML = `<img src="${monsterData.imageUrl}" alt="${monsterName} icon" class="monster-icon-img" 
-                    onerror="this.parentNode.innerHTML='<span class=\\'text-sm font-bold text-white\\' style=\\'background-color: ${monsterData.color}; padding: 0.5rem; border-radius: 50%;\\'>${monsterData.short}</span>'; this.parentNode.style.backgroundColor='transparent';" />`;
-                iconContainer.style.border = '2px solid #3b82f6'; // 選択されたことを示す
-                iconContainer.classList.remove('bg-gray-700');
-            }
-
-            // モーダルを閉じる
-            closeModal();
-        }
-
-
-        // =================================================================
-        // 4. 計算ロジック
-        // =================================================================
-
-        /**
-         * 基礎相性値を取得するヘルパー関数
-         */
-        function getBaseComp(youngerName, olderName) {
-            const youngerData = BASE_COMPATIBILITY[youngerName];
-            if (!youngerData) {
-                console.error(`Error: Younger monster data not found for ${youngerName}`);
-                return 0;
-            }
-            const compValue = youngerData[olderName];
-            if (compValue === undefined) {
-                console.error(`Error: Compatibility value not found for ${youngerName} -> ${olderName}`);
-                return 0;
-            }
-            return compValue;
-        }
-
-        /**
-         * 相性値の計算を実行する関数
-         */
-        function calculateCompValue(childName, selectedMonsters, secret3Count, secret2Count, nobleAdd) {
-            const { P1, Gf1, Gm1, P2, Gf2, Gm2 } = selectedMonsters;
-
-            // 基礎相性値のパーツ
-            const comp_C_P1 = getBaseComp(childName, P1);
-            const comp_P1_Gf1 = getBaseComp(P1, Gf1);
-            const comp_C_Gf1 = getBaseComp(childName, Gf1);
-            const comp_P1_Gm1 = getBaseComp(P1, Gm1);
-            const comp_C_Gm1 = getBaseComp(childName, Gm1);
-
-            const comp_C_P2 = getBaseComp(childName, P2);
-            const comp_P2_Gf2 = getBaseComp(P2, Gf2);
-            const comp_C_Gf2 = getBaseComp(childName, Gf2);
-            const comp_P2_Gm2 = getBaseComp(P2, Gm2);
-            const comp_C_Gm2 = getBaseComp(childName, Gm2);
-
-            const comp_P1_P2 = getBaseComp(P1, P2);
-
-            // 相性値の計算式
-            let totalComp = 0;
-
-            // 1. 父側ライン
-            totalComp += comp_C_P1;
-            totalComp += Math.min(comp_P1_Gf1, comp_C_Gf1);
-            totalComp += Math.min(comp_P1_Gm1, comp_C_Gm1);
-
-            // 2. 母側ライン
-            totalComp += comp_C_P2;
-            totalComp += Math.min(comp_P2_Gf2, comp_C_Gf2);
-            totalComp += Math.min(comp_P2_Gm2, comp_C_Gm2);
-
-            // 3. 両親
-            totalComp += comp_P1_P2;
-
-            // 4. 固定値と加算値
-            totalComp += 224;
-            totalComp += (secret2Count * 5);
-            totalComp += (secret3Count * 12.5);
-            totalComp += nobleAdd;
-
-            return totalComp;
-        }
-
-        /**
-         * 相性値に基づいて相性シンボルを決定する関数
-         */
-        function getCompSymbol(value) {
-            if (value >= 660) return { symbol: '👑', class: 'symbol-crown text-3xl' };
-            if (value >= 614) return { symbol: '☆', class: 'symbol-star text-2xl' };
-            if (value >= 490) return { symbol: '◎', class: 'symbol-double-circle text-2xl' };
-            if (value >= 374) return { symbol: '○', class: 'symbol-circle text-xl' };
-            if (value >= 255) return { symbol: '△', class: 'symbol-triangle text-xl' };
-            return { symbol: '×', class: 'symbol-x text-xl' };
-        }
-
-        // =================================================================
-        // 5. メイン処理とイベントリスナー
-        // =================================================================
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const resultList = document.getElementById('result-list');
-            const errorMessage = document.getElementById('error-message');
-            const calculateBtn = document.getElementById('calculate-btn');
-            
-            // モーダルにモンスターリストを生成
-            const monsterListDiv = document.getElementById('monster-list');
-            MONSTERS.forEach(m => {
-                const button = document.createElement('button');
-                button.className = 'flex flex-col items-center p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors';
-                button.innerHTML = `
-                    <div class="monster-icon-container mb-1">
-                        <!-- GitHub Pagesデプロイ後、同階層のimageフォルダから画像をロードする -->
-                        <img src="${m.imageUrl}" alt="${m.name} icon" class="monster-icon-img"
-                            onerror="this.parentNode.innerHTML='<span class=\\'text-sm font-bold text-white\\' style=\\'background-color: ${m.color}; padding: 0.5rem; border-radius: 50%;\\'>${m.short}</span>'; this.parentNode.style.backgroundColor='transparent';"
-                        >
-                    </div>
-                    <span class="text-xs font-medium text-white">${m.name}</span>
-                `;
-                button.onclick = () => selectMonster(m.name);
-                monsterListDiv.appendChild(button);
-            });
-
-            // モンスター選択ボタンにイベントリスナーを設定
-            document.querySelectorAll('.monster-select-btn').forEach(button => {
-                button.addEventListener('click', () => openModal(button.dataset.target));
-            });
-
-            // 計算ボタンのイベントリスナー
-            calculateBtn.addEventListener('click', () => {
-                // 1. エラーチェック
-                const requiredMonsters = ['P1', 'Gf1', 'Gm1', 'P2', 'Gf2', 'Gm2'];
-                const missingMonster = requiredMonsters.find(key => !state[key]);
-
-                if (missingMonster) {
-                    errorMessage.textContent = '警告: 6体すべてのモンスターを選択してください。';
-                    errorMessage.classList.remove('hidden');
-                    resultList.innerHTML = '';
-                    return;
-                }
-                
-                const allSelected = requiredMonsters.map(key => state[key]);
-                const unknownMonster = allSelected.find(name => !BASE_COMPATIBILITY[name] || !BASE_COMPATIBILITY[name][name]);
-
-                if (unknownMonster) {
-                    errorMessage.textContent = `エラー: 選択されたモンスター「${unknownMonster}」の基礎相性データがテーブルに見つかりません。`;
-                    errorMessage.classList.remove('hidden');
-                    resultList.innerHTML = '';
-                    return;
-                }
-
-                errorMessage.classList.add('hidden');
-                
-                // 2. 入力値の取得
-                const secret3Count = parseFloat(document.getElementById('secret3').value) || 0;
-                const secret2Count = parseFloat(document.getElementById('secret2').value) || 0;
-                const nobleAdd = parseFloat(document.getElementById('noble-add').value) || 0;
-
-                // 3. 全てのモンスターに対して相性値を計算
-                const results = [];
-                MONSTER_NAMES.forEach(childName => {
-                    try {
-                        const compValue = calculateCompValue(
-                            childName,
-                            state,
-                            secret3Count,
-                            secret2Count,
-                            nobleAdd
-                        );
-                        
-                        const { symbol, class: symbolClass } = getCompSymbol(compValue);
-                        
-                        results.push({
-                            name: childName,
-                            value: compValue,
-                            symbol: symbol,
-                            symbolClass: symbolClass,
-                            monsterData: MONSTERS.find(m => m.name === childName)
-                        });
-                    } catch (e) {
-                        console.error(`Calculation failed for ${childName}:`, e);
-                    }
-                });
-
-                // 4. 相性値で降順ソート
-                results.sort((a, b) => b.value - a.value);
-
-                // 5. 結果をレンダリング
-                resultList.innerHTML = '';
-
-                if (results.length === 0) {
-                    resultList.innerHTML = '<p class="col-span-full text-center text-gray-500 mt-8">計算結果がありませんでした。</p>';
-                    return;
-                }
-
-                results.forEach(res => {
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = 'flex flex-col items-center bg-gray-700 p-3 rounded-lg shadow-md hover:bg-gray-600 transition-colors cursor-default border border-gray-600';
-                    itemDiv.innerHTML = `
-                        <div class="monster-icon-container mb-2 w-10 h-10">
-                             <!-- GitHub Pagesデプロイ後、同階層のimageフォルダから画像をロードする -->
-                            <img src="${res.monsterData.imageUrl}" alt="${res.name} icon" class="monster-icon-img" 
-                                onerror="this.parentNode.innerHTML='<span class=\\'text-sm font-bold text-white\\' style=\\'background-color: ${res.monsterData.color}; padding: 0.5rem; border-radius: 50%;\\'>${res.monsterData.short}</span>'; this.parentNode.style.backgroundColor='transparent';"
-                            >
-                        </div>
-                        <span class="text-sm font-semibold text-white truncate w-full text-center">${res.name}</span>
-                        <div class="flex items-center space-x-1 mt-1">
-                            <span class="text-base font-bold text-indigo-300">${res.value.toFixed(1)}</span>
-                            <span class="${res.symbolClass}">${res.symbol}</span>
-                        </div>
-                    `;
-                    resultList.appendChild(itemDiv);
-                });
-            });
-        });
-    </script>
+    <script src="js/data.js"></script>
+    <script src="js/script.js"></script>
 </body>
+
 </html>
