@@ -561,7 +561,17 @@ function updateAllPlaceholders() {
 
 function renderMonstersToModal() {
     const grid = document.getElementById('modal-grid');
-    grid.innerHTML = MONSTER_NAMES.map((name, idx) => `
+    // Add "Empty" option first
+    const emptyOption = `
+        <div class="modal-item" onclick="selectMonster(null)" style="background:#444; border:1px dashed #777;">
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%;">
+                <span style="font-size:1.5rem; color:#aaa;">X</span>
+                <span style="font-size:0.7rem;">空欄に戻す</span>
+            </div>
+        </div>
+    `;
+
+    const monsterOptions = MONSTER_NAMES.map((name, idx) => `
         <div class="modal-item" onclick="selectMonster(${idx})">
             <div>
                 <img src="images/${name}.png" alt="${name}" style="width:32px; height:32px; display:block; margin:0 auto;"><br>
@@ -569,6 +579,8 @@ function renderMonstersToModal() {
             </div>
         </div>
     `).join('');
+
+    grid.innerHTML = emptyOption + monsterOptions;
 }
 
 function renderResults(containerId, list) {

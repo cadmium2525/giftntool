@@ -244,8 +244,8 @@ button.action-btn:active {
 
 .modal-content {
     background: var(--card-bg);
-    width: 90%;
-    max-width: 400px;
+    width: 95%;
+    max-width: 500px;
     max-height: 80vh;
     border-radius: 10px;
     padding: 20px;
@@ -254,8 +254,8 @@ button.action-btn:active {
 
 .modal-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
 }
 
 .modal-item {
