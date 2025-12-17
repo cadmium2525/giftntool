@@ -21,8 +21,20 @@ document.addEventListener('DOMContentLoaded', () => {
     renderMonstersToModal();
     renderExclusionModal();
     updateAllPlaceholders();
+    updateAllPlaceholders();
     updateExclusionCounts();
+    syncSliderLabels();
 });
+
+function syncSliderLabels() {
+    const s3 = document.getElementById('secret3');
+    const s2 = document.getElementById('secret2');
+    const noble = document.getElementById('noble');
+
+    if (s3) document.getElementById('v3-val').innerText = s3.value;
+    if (s2) document.getElementById('v2-val').innerText = s2.value;
+    if (noble) document.getElementById('noble-val').innerText = noble.value;
+}
 
 // --- Logic Helpers ---
 
@@ -317,10 +329,15 @@ function runReverseOpt() {
 
 // --- Feature 4: General Search ---
 function runGeneralSearch() {
-    const ids = [selectedMonsters.gen_ff, selectedMonsters.gen_fm,
+    // Current fixed grandparents
+    const fixedIds = [selectedMonsters.gen_ff, selectedMonsters.gen_fm,
     selectedMonsters.gen_mf, selectedMonsters.gen_mm];
-    if (ids.some(x => x === null)) {
-        alert("祖父母をすべて指定してください");
+
+    // Count nulls
+    const nullCount = fixedIds.filter(x => x === null).length;
+
+    if (nullCount > 2) {
+        alert("空きスロットは2つまでにしてください（処理負荷のため）");
         return;
     }
 
@@ -329,62 +346,132 @@ function runGeneralSearch() {
         if (!excludedMonsters.has(i)) validMonsters.push(i);
     }
 
-    let bestPair = null;
-    let maxMinScore = -1;
+    // UI: Show loading, hide previous results
+    document.getElementById('gen-loading').style.display = 'block';
+    document.getElementById('gen-results').innerHTML = '';
 
-    for (let f of validMonsters) {
-        for (let m of validMonsters) {
+    // Defer execution to allow UI to render
+    setTimeout(() => {
+        // Search state
+        let maxMinScore = -1;
+        let bestSolution = null;
+
+        // Helper to calculate min score for a full lineage
+        function evaluateLineage(f, m, gps) {
             let minScore = 9999;
             for (let c = 0; c < MONSTER_NAMES.length; c++) {
-                let s = calculateScore(c, f, ids[0], ids[1], m, ids[2], ids[3], 0, 0, 0);
+                // calculateScore(child, f, ff, fm, m, mf, mm, ...)
+                // gps is [ff, fm, mf, mm]
+                let s = calculateScore(c, f, gps[0], gps[1], m, gps[2], gps[3], 0, 0, 0);
                 if (s < minScore) minScore = s;
             }
-            if (minScore > maxMinScore) {
-                maxMinScore = minScore;
-                bestPair = { f: f, m: m, val: minScore };
+            return minScore;
+        }
+
+        // Recursive solver for missing grandparents
+        // currentGPs: array of 4 (some null)
+        // missingIndices: array of indices [0, 1, 2, 3] that are null
+        // depth: current index in missingIndices
+        function solveGPs(f, m, currentGPs, missingIndices, depth) {
+            if (depth === missingIndices.length) {
+                // All filled
+                let val = evaluateLineage(f, m, currentGPs);
+                if (val > maxMinScore) {
+                    maxMinScore = val;
+                    // Clone currentGPs because it's reused
+                    bestSolution = { f: f, m: m, gps: [...currentGPs], val: val };
+                }
+                return;
+            }
+
+            let targetIndex = missingIndices[depth];
+            for (let cand of validMonsters) {
+                currentGPs[targetIndex] = cand;
+                solveGPs(f, m, currentGPs, missingIndices, depth + 1);
+                currentGPs[targetIndex] = null; // Backtrack (though not strictly needed as we overwrite)
             }
         }
-    }
 
-    const container = document.getElementById('gen-results');
+        // Identify missing indices
+        let missingIndices = [];
+        for (let i = 0; i < 4; i++) {
+            if (fixedIds[i] === null) missingIndices.push(i);
+        }
 
-    let headerHTML = `
-        <div style="grid-column: span 5;">
-             <div class="result-card-2x3">
-                <div class="result-header">推奨ペア (最低保証 ${bestPair.val.toFixed(1)})</div>
-                <div class="result-parents-grid">
-                    <div class="parent-label">父親側</div>
-                    <div class="mini-card"><img src="images/${MONSTER_NAMES[bestPair.f]}.png" onerror="this.src=''"><div>父<br>${MONSTER_NAMES[bestPair.f]}</div></div>
-                    <div class="mini-card"><img src="images/${MONSTER_NAMES[ids[0]]}.png" onerror="this.src=''"><div>祖父<br>${MONSTER_NAMES[ids[0]]}</div></div>
-                    <div class="mini-card"><img src="images/${MONSTER_NAMES[ids[1]]}.png" onerror="this.src=''"><div>祖母<br>${MONSTER_NAMES[ids[1]]}</div></div>
+        // Main loop: Iterate Parents
+        for (let f of validMonsters) {
+            for (let m of validMonsters) {
+                // Prepare a working copy of GPs
+                let workingGPs = [...fixedIds];
+                solveGPs(f, m, workingGPs, missingIndices, 0);
+            }
+        }
+
+        // Search Complete - hide loading
+        document.getElementById('gen-loading').style.display = 'none';
+
+        if (!bestSolution) {
+            alert("有効な結果が見つかりませんでした");
+            return;
+        }
+
+        const container = document.getElementById('gen-results');
+        // FIX: Remove grid class from container to avoid layout breakage
+        container.classList.remove('result-grid');
+
+        const ids = bestSolution.gps; // The filled GPs
+
+        // NOTE: We want to capture BOTH the header (recommended pair) and the list (all monsters).
+        // So we wrap them in one div id="capture-gen".
+
+        let contentHTML = `
+            <div id="capture-gen" style="padding:10px; background:#121212;">
+                <div style="margin-bottom:15px;">
+                     <div class="result-card-2x3">
+                        <div class="result-header">推奨ペア (最低保証 ${bestSolution.val.toFixed(1)})</div>
+                        <div class="result-parents-grid">
+                            <div class="parent-label">父親側</div>
+                            <div class="mini-card"><img src="images/${MONSTER_NAMES[bestSolution.f]}.png" onerror="this.src=''"><div>父<br>${MONSTER_NAMES[bestSolution.f]}</div></div>
+                            <div class="mini-card"><img src="images/${MONSTER_NAMES[ids[0]]}.png" onerror="this.src=''"><div>祖父<br>${MONSTER_NAMES[ids[0]]}</div></div>
+                            <div class="mini-card"><img src="images/${MONSTER_NAMES[ids[1]]}.png" onerror="this.src=''"><div>祖母<br>${MONSTER_NAMES[ids[1]]}</div></div>
+                        </div>
+                        <div class="result-parents-grid">
+                            <div class="parent-label">母親側</div>
+                            <div class="mini-card"><img src="images/${MONSTER_NAMES[bestSolution.m]}.png" onerror="this.src=''"><div>母<br>${MONSTER_NAMES[bestSolution.m]}</div></div>
+                            <div class="mini-card"><img src="images/${MONSTER_NAMES[ids[2]]}.png" onerror="this.src=''"><div>祖父<br>${MONSTER_NAMES[ids[2]]}</div></div>
+                            <div class="mini-card"><img src="images/${MONSTER_NAMES[ids[3]]}.png" onerror="this.src=''"><div>祖母<br>${MONSTER_NAMES[ids[3]]}</div></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="result-parents-grid">
-                    <div class="parent-label">母親側</div>
-                    <div class="mini-card"><img src="images/${MONSTER_NAMES[bestPair.m]}.png" onerror="this.src=''"><div>母<br>${MONSTER_NAMES[bestPair.m]}</div></div>
-                    <div class="mini-card"><img src="images/${MONSTER_NAMES[ids[2]]}.png" onerror="this.src=''"><div>祖父<br>${MONSTER_NAMES[ids[2]]}</div></div>
-                    <div class="mini-card"><img src="images/${MONSTER_NAMES[ids[3]]}.png" onerror="this.src=''"><div>祖母<br>${MONSTER_NAMES[ids[3]]}</div></div>
-                </div>
+        `;
+
+        let list = [];
+        for (let c = 0; c < MONSTER_NAMES.length; c++) {
+            let s = calculateScore(c, bestSolution.f, ids[0], ids[1], bestSolution.m, ids[2], ids[3], 0, 0, 0);
+            list.push({ id: c, name: MONSTER_NAMES[c], score: s, symbol: getSymbol(s) });
+        }
+        list.sort((a, b) => b.score - a.score);
+
+        let gridHTML = list.map(item => `
+            <div class="result-card">
+                <img src="images/${item.name}.png" onerror="this.src=''">
+                <div>${item.name}</div>
+                <div class="result-score">${item.score.toFixed(1)}</div>
+                <div class="result-symbol">${item.symbol}</div>
             </div>
-        </div>
-    `;
+        `).join('');
 
-    let list = [];
-    for (let c = 0; c < MONSTER_NAMES.length; c++) {
-        let s = calculateScore(c, bestPair.f, ids[0], ids[1], bestPair.m, ids[2], ids[3], 0, 0, 0);
-        list.push({ id: c, name: MONSTER_NAMES[c], score: s, symbol: getSymbol(s) });
-    }
-    list.sort((a, b) => b.score - a.score);
+        contentHTML += `
+                <div class="result-grid" style="margin-top:0;">${gridHTML}</div>
+            </div>
+            <div style="text-align:center; margin-top:15px;">
+                <button class="save-img-btn" onclick="saveAsImage('capture-gen', 'general_search_result')">📷 画像を保存</button>
+            </div>
+        `;
 
-    let gridHTML = list.map(item => `
-        <div class="result-card">
-            <img src="images/${item.name}.png" onerror="this.src=''">
-            <div>${item.name}</div>
-            <div class="result-score">${item.score.toFixed(1)}</div>
-            <div class="result-symbol">${item.symbol}</div>
-        </div>
-    `).join('');
+        container.innerHTML = contentHTML;
 
-    container.innerHTML = headerHTML + gridHTML;
+    }, 50); // Small delay to let UI render loading spinner
 }
 
 // --- UI Helpers ---
@@ -435,8 +522,9 @@ function render2x3Result(containerId, combo, finalScore, items) {
         </div>`;
     }
 
+    const captureId = `capture-${containerId}`;
     container.innerHTML = `
-        <div class="result-card-2x3">
+        <div id="${captureId}" class="result-card-2x3">
             <div class="result-header">
                 ${getSymbol(finalScore)} <span style="font-size:1.2rem; margin-left:10px; font-weight:bold;">${finalScore.toFixed(1)}</span>
             </div>
@@ -456,6 +544,9 @@ function render2x3Result(containerId, combo, finalScore, items) {
             </div>
             
             ${itemsHTML}
+        </div>
+        <div style="text-align:right; margin-top:10px;">
+            <button class="save-img-btn" onclick="saveAsImage('${captureId}', 'opt_result')">📷 画像を保存</button>
         </div>
     `;
 }
@@ -583,9 +674,42 @@ function renderMonstersToModal() {
     grid.innerHTML = emptyOption + monsterOptions;
 }
 
+// --- Image Saving ---
+function saveAsImage(elementId, fileName) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    // Temporarily hide buttons inside the element from screenshot? 
+    // Or just let them be visible. User might want to see them.
+    // Spec says "capture result". Usually buttons are excluded, but let's keep it simple first.
+    // If we want to exclude, we can use 'ignoreElements' callback.
+
+    // Use CORS and allowTaint to try and fix "security error" or missing images
+    // Also use logging to see what happens
+    html2canvas(element, {
+        backgroundColor: "#1e1e1e", // Match card-bg or bg-color
+        scale: 2, // High res
+        useCORS: true,
+        logging: true
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `${fileName}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+    }).catch(err => {
+        console.error("Image save failed:", err);
+        alert("画像の保存に失敗しました: " + err.message);
+    });
+}
+
 function renderResults(containerId, list) {
     const container = document.getElementById(containerId);
-    container.innerHTML = list.map(item => `
+
+    // KEY FIX: The container usually has 'result-grid' class which breaks layout if we add children directly.
+    // We remove it from the parent and put it on the inner wrapper.
+    container.classList.remove('result-grid');
+
+    let html = list.map(item => `
         <div class="result-card">
             <img src="images/${item.name}.png" onerror="this.src=''">
             <div>${item.name}</div>
@@ -593,6 +717,16 @@ function renderResults(containerId, list) {
             <div class="result-symbol">${item.symbol}</div>
         </div>
     `).join('');
+
+    // Wrap in a capture div (which will have the grid layout) + button
+    container.innerHTML = `
+        <div id="capture-${containerId}">
+            <div class="result-grid" style="margin-top:0;">${html}</div>
+        </div>
+        <div style="text-align:center; margin-top:15px;">
+            <button class="save-img-btn" onclick="saveAsImage('capture-${containerId}', 'gift_result')">📷 画像を保存</button>
+        </div>
+    `;
 }
 
 function saveToLocalStorage() {

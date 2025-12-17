@@ -4,8 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#121212">
+
     <title>Monster Farm Sim</title>
     <link rel="stylesheet" href="css/style.css?v=2">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 
 <body>
@@ -19,9 +28,13 @@
         <section id="tab-gift" class="active">
             <div class="iframe-container">
                 <iframe src="https://monster-farm-simulator.onrender.com" title="MF Simulator"></iframe>
+                <button class="floating-scroll-btn"
+                    onclick="document.getElementById('tyrant-calc').scrollIntoView({behavior: 'smooth'})">
+                    ⬇ タイラントへ
+                </button>
             </div>
 
-            <div class="feature-title">ギフトン＆タイラント</div>
+            <div id="tyrant-calc" class="feature-title">ギフトン＆タイラント</div>
 
             <!-- 1. Parents Input First -->
             <div class="input-group">
@@ -228,7 +241,8 @@
         <section id="tab-general">
             <div class="feature-title">汎用逆引き探索</div>
             <p style="font-size:0.8rem; color:#aaa; margin-bottom:10px;">
-                指定した4人の祖父母から、全モンスターとの最低相性が最大になる父母の組み合わせを探します。
+                指定した4人の祖父母から、全モンスターとの最低相性が最大になる父母の組み合わせを探します。<br>
+                <span style="color:#eeaaaa;">※祖父母は最大2枠まで空欄（未指定）にできます。空欄の箇所も探索対象となります（処理に数秒かかります）。</span>
             </p>
 
             <div class="input-group">
@@ -280,7 +294,11 @@
                 </div>
             </div>
 
-            <button class="action-btn" onclick="runGeneralSearch()">汎用ペア探索</button>
+            <button class="action-btn" onclick="runGeneralSearch()">汎用探索</button>
+            <div id="gen-loading" style="display:none; text-align:center; margin-top:20px;">
+                <div class="loader"></div>
+                <div style="margin-top:10px; color:#aaa; font-size:0.9rem;">探索中... (数秒かかります)</div>
+            </div>
             <div id="gen-results" class="result-grid"></div>
         </section>
 

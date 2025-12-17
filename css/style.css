@@ -22,6 +22,27 @@ body {
     padding-bottom: calc(var(--nav-height) + 20px);
 }
 
+/* Loader */
+.loader {
+    border: 4px solid #333;
+    border-top: 4px solid var(--accent-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 header {
     padding: 15px;
     background-color: var(--card-bg);
@@ -101,7 +122,7 @@ label {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 0.7rem;
+    font-size: 0.6rem;
     color: var(--text-secondary);
     overflow: hidden;
 }
@@ -163,7 +184,7 @@ button.action-btn:active {
     padding: 5px;
     border-radius: 5px;
     text-align: center;
-    font-size: 0.75rem;
+    font-size: 0.6rem;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -266,7 +287,7 @@ button.action-btn:active {
     justify-content: center;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 0.7rem;
+    font-size: 0.6rem;
     text-align: center;
 }
 
@@ -292,6 +313,56 @@ button.action-btn:active {
     /* Full vertical size minus some buffer */
     margin-bottom: 20px;
     background: #000;
+    position: relative;
+    /* For floating button */
+}
+
+.floating-scroll-btn {
+    position: absolute;
+    top: 5px;
+    right: 20px;
+    z-index: 10;
+    padding: 5px 10px;
+    background: var(--accent-color);
+    color: #000;
+    font-weight: bold;
+    border-radius: 50px;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: transform 0.2s;
+    text-decoration: none;
+    /* In case it is an <a> */
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.save-img-btn {
+    margin-top: 15px;
+    background-color: #333;
+    color: #fff;
+    border: 1px solid #555;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.save-img-btn:hover {
+    background-color: #444;
+}
+
+.floating-scroll-btn:hover {
+    transform: scale(1.05);
+}
+
+.floating-scroll-btn:active {
+    transform: scale(0.95);
 }
 
 iframe {
@@ -321,8 +392,7 @@ iframe {
 .monster-btn.large {
     width: 100%;
     height: 80px;
-    /* Larger */
-    font-size: 0.85rem;
+    font-size: 0.73rem;
 }
 
 .monster-btn.large img {
@@ -362,7 +432,7 @@ iframe {
     display: flex;
     flex-direction: column;
     align-items: center;
-    font-size: 0.75rem;
+    font-size: 0.6rem;
     height: 100%;
     justify-content: center;
 }
