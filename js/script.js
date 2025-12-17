@@ -428,7 +428,7 @@ function runGeneralSearch() {
             <div id="capture-gen" style="padding:10px; background:#121212;">
                 <div style="margin-bottom:15px;">
                      <div class="result-card-2x3">
-                        <div class="result-header">推奨ペア (最低保証 ${bestSolution.val.toFixed(1)})</div>
+                        <div class="result-header">推奨系統 (最低保証 ${bestSolution.val.toFixed(1)})</div>
                         <div class="result-parents-grid">
                             <div class="parent-label">父親側</div>
                             <div class="mini-card"><img src="images/${MONSTER_NAMES[bestSolution.f]}.png" onerror="this.src=''"><div>父<br>${MONSTER_NAMES[bestSolution.f]}</div></div>
