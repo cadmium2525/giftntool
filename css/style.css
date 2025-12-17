@@ -213,12 +213,18 @@ button.action-btn:active {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: var(--nav-height);
+    /* Height includes safe area padding */
+    height: calc(var(--nav-height) + env(safe-area-inset-bottom));
     background: var(--card-bg);
     border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: space-around;
-    align-items: center;
+    align-items: flex-start;
+    /* Align items to top of nav bar */
+    padding-top: 5px;
+    /* Top padding */
+    padding-bottom: env(safe-area-inset-bottom);
+    /* Safe area padding */
     z-index: 100;
 }
 
