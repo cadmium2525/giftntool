@@ -88,7 +88,15 @@ function runGiftSearch() {
             results.push({ id: idx, name: name, score: s, symbol: getSymbol(s) });
         });
         results.sort((a, b) => b.score - a.score);
-        renderResults('gift-results', results);
+
+        // Prepare context for image saving
+        const context = {
+            f: ids[0], ff: ids[1], fm: ids[2],
+            m: ids[3], mf: ids[4], mm: ids[5],
+            s3: s3, s2: s2, noble: noble
+        };
+
+        renderResults('gift-results', results, context);
         return;
     }
 
@@ -702,12 +710,34 @@ function saveAsImage(elementId, fileName) {
     });
 }
 
-function renderResults(containerId, list) {
+function renderResults(containerId, list, context) {
     const container = document.getElementById(containerId);
 
     // KEY FIX: The container usually has 'result-grid' class which breaks layout if we add children directly.
     // We remove it from the parent and put it on the inner wrapper.
     container.classList.remove('result-grid');
+
+    let headerHTML = '';
+    if (context) {
+        headerHTML = `
+        <div style="margin-bottom:15px; padding:5px;">
+             <div class="result-card-2x3">
+                <div class="result-header">設定 (秘伝Ⅲ:${context.s3}, 秘伝Ⅱ:${context.s2}, ノーブル:${context.noble})</div>
+                <div class="result-parents-grid">
+                    <div class="parent-label">父親側</div>
+                    <div class="mini-card"><img src="images/${MONSTER_NAMES[context.f]}.png" onerror="this.src=''"><div>父<br>${MONSTER_NAMES[context.f]}</div></div>
+                    <div class="mini-card"><img src="images/${MONSTER_NAMES[context.ff]}.png" onerror="this.src=''"><div>祖父<br>${MONSTER_NAMES[context.ff]}</div></div>
+                    <div class="mini-card"><img src="images/${MONSTER_NAMES[context.fm]}.png" onerror="this.src=''"><div>祖母<br>${MONSTER_NAMES[context.fm]}</div></div>
+                </div>
+                <div class="result-parents-grid">
+                    <div class="parent-label">母親側</div>
+                    <div class="mini-card"><img src="images/${MONSTER_NAMES[context.m]}.png" onerror="this.src=''"><div>母<br>${MONSTER_NAMES[context.m]}</div></div>
+                    <div class="mini-card"><img src="images/${MONSTER_NAMES[context.mf]}.png" onerror="this.src=''"><div>祖父<br>${MONSTER_NAMES[context.mf]}</div></div>
+                    <div class="mini-card"><img src="images/${MONSTER_NAMES[context.mm]}.png" onerror="this.src=''"><div>祖母<br>${MONSTER_NAMES[context.mm]}</div></div>
+                </div>
+            </div>
+        </div>`;
+    }
 
     let html = list.map(item => `
         <div class="result-card">
@@ -720,7 +750,8 @@ function renderResults(containerId, list) {
 
     // Wrap in a capture div (which will have the grid layout) + button
     container.innerHTML = `
-        <div id="capture-${containerId}">
+        <div id="capture-${containerId}" style="padding:10px; background:#121212;">
+            ${headerHTML}
             <div class="result-grid" style="margin-top:0;">${html}</div>
         </div>
         <div style="text-align:center; margin-top:15px;">
