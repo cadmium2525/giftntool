@@ -9,8 +9,14 @@ let selectedMonsters = {
     // Feature 3
     rev_child: null, rev_f: null, rev_ff: null, rev_fm: null, rev_m: null, rev_mf: null, rev_mm: null,
     // Feature 4
-    gen_ff: null, gen_fm: null, gen_mf: null, gen_mm: null
+    gen_ff: null, gen_fm: null, gen_mf: null, gen_mm: null,
+    // Feature 4: Matching Mode
+    gen_match_p: null, gen_match_gp1: null, gen_match_gp2: null
 };
+
+// Target Bloodline State
+let searchTargetMode = 'all'; // 'all' or 'designated'
+let targetBloodlines = new Set(); // Stores IDs of selected monsters
 
 // Set of excluded IDs
 let excludedMonsters = new Set();
@@ -157,6 +163,7 @@ function runOptimization() {
                 bestCombo = {
                     f: p.id, ff: p.gp, fm: p.gp,
                     m: m.id, mf: m.gp, mm: m.gp,
+                    child: childId, // Store child ID
                     rawScore: total
                 };
             }
@@ -280,6 +287,7 @@ function runReverseOpt() {
                 best = {
                     f: p.id, ff: p.gp1, fm: p.gp2,
                     m: m.id, mf: m.gp1, mm: m.gp2,
+                    child: childId, // Store child ID
                     rawScore: total
                 };
             }
@@ -337,7 +345,14 @@ function runReverseOpt() {
 
 // --- Feature 4: General Search ---
 function runGeneralSearch() {
-    // Current fixed grandparents
+    // Check mode
+    const mode = document.getElementById('gen_mode').value;
+    if (mode === 'matching') {
+        runMatchingSearch();
+        return;
+    }
+
+    // Existing Grandparents Search Logic
     const fixedIds = [selectedMonsters.gen_ff, selectedMonsters.gen_fm,
     selectedMonsters.gen_mf, selectedMonsters.gen_mm];
 
@@ -355,8 +370,10 @@ function runGeneralSearch() {
     }
 
     // UI: Show loading, hide previous results
-    document.getElementById('gen-loading').style.display = 'block';
-    document.getElementById('gen-results').innerHTML = '';
+    const loadingDiv = document.getElementById('gen-loading');
+    const resultContainer = document.getElementById('gen-results');
+    loadingDiv.style.display = 'block';
+    resultContainer.innerHTML = '';
 
     // Defer execution to allow UI to render
     setTimeout(() => {
@@ -364,10 +381,22 @@ function runGeneralSearch() {
         let maxMinScore = -1;
         let bestSolution = null;
 
+        // Determine targets
+        let targets = null;
+        if (searchTargetMode === 'designated' && targetBloodlines.size > 0) {
+            targets = Array.from(targetBloodlines);
+        } else if (searchTargetMode === 'designated' && targetBloodlines.size === 0) {
+            // Fallback if empty
+            // alert('育成対象が選択されていません。全血統モードで実行します。');
+            targets = null;
+        }
+
         // Helper to calculate min score for a full lineage
         function evaluateLineage(f, m, gps) {
             let minScore = 9999;
-            for (let c = 0; c < MONSTER_NAMES.length; c++) {
+            const loopTargets = (targets && targets.length > 0) ? targets : Array.from({ length: MONSTER_NAMES.length }, (_, i) => i);
+
+            for (let c of loopTargets) {
                 // calculateScore(child, f, ff, fm, m, mf, mm, ...)
                 // gps is [ff, fm, mf, mm]
                 let s = calculateScore(c, f, gps[0], gps[1], m, gps[2], gps[3], 0, 0, 0);
@@ -416,7 +445,7 @@ function runGeneralSearch() {
         }
 
         // Search Complete - hide loading
-        document.getElementById('gen-loading').style.display = 'none';
+        loadingDiv.style.display = 'none';
 
         if (!bestSolution) {
             alert("有効な結果が見つかりませんでした");
@@ -460,14 +489,18 @@ function runGeneralSearch() {
         }
         list.sort((a, b) => b.score - a.score);
 
-        let gridHTML = list.map(item => `
-            <div class="result-card">
+        let gridHTML = list.map(item => {
+            const isDesignated = (searchTargetMode === 'designated' && targetBloodlines.has(item.id));
+            const highlightClass = isDesignated ? 'designated-highlight' : '';
+
+            return `
+            <div class="result-card ${highlightClass}">
                 <img src="images/${item.name}.png" onerror="this.src=''">
                 <div>${item.name}</div>
                 <div class="result-score">${item.score.toFixed(1)}</div>
                 <div class="result-symbol">${item.symbol}</div>
             </div>
-        `).join('');
+        `}).join('');
 
         contentHTML += `
                 <div class="result-grid" style="margin-top:0;">${gridHTML}</div>
@@ -480,6 +513,218 @@ function runGeneralSearch() {
         container.innerHTML = contentHTML;
 
     }, 50); // Small delay to let UI render loading spinner
+}
+
+// --- Feature 4: Matching Search (New) ---
+function runMatchingSearch() {
+    const p = selectedMonsters.gen_match_p;
+    const gp1 = selectedMonsters.gen_match_gp1;
+    const gp2 = selectedMonsters.gen_match_gp2;
+
+    if (p === null || gp1 === null || gp2 === null) {
+        alert("親・祖父・祖母の3体をすべて指定してください。");
+        return;
+    }
+
+    const resultContainer = document.getElementById('gen-results');
+    resultContainer.classList.remove('result-grid'); // Fix layout
+    resultContainer.innerHTML = '';
+    const loadingDiv = document.getElementById('gen-loading');
+    loadingDiv.style.display = 'block';
+
+    const validMonsters = [];
+    for (let i = 0; i < MONSTER_NAMES.length; i++) {
+        if (!excludedMonsters.has(i)) {
+            validMonsters.push(i);
+        }
+    }
+
+    // Helper to calculate min score for a full lineage
+    function evaluateLineage(f, m, gps, targets) {
+        let minScore = 9999;
+        const loopTargets = (targets && targets.length > 0) ? targets : Array.from({ length: MONSTER_NAMES.length }, (_, i) => i);
+
+        for (let c of loopTargets) {
+            // calculateScore(child, f, ff, fm, m, mf, mm, ...)
+            // gps is [ff, fm, mf, mm]
+            let s = calculateScore(c, f, gps[0], gps[1], m, gps[2], gps[3], 0, 0, 0);
+            if (s < minScore) minScore = s;
+        }
+        return minScore;
+    }
+
+    setTimeout(() => {
+        let targets = null;
+        if (searchTargetMode === 'designated' && targetBloodlines.size > 0) {
+            targets = Array.from(targetBloodlines);
+        } else if (searchTargetMode === 'designated' && targetBloodlines.size === 0) {
+            alert('育成対象が選択されていません。全血統モードで実行します。');
+            targets = null; // Fallback
+        }
+
+        let bestScore = -1;
+        let bestCombo = null; // { mode: 'A'|'B', partnerP, partnerGP1, partnerGP2, fullLineage }
+
+        // Pattern A: Input is Father side (f=P, ff=GP1, fm=GP2)
+        // Search Mother side (m, mf, mm)
+        // Fixed: f, ff, fm
+        const f = p;
+        const ff = gp1;
+        const fm = gp2;
+
+        for (let m of validMonsters) {
+            for (let mf of validMonsters) {
+                for (let mm of validMonsters) {
+                    // lineage: f, m, [ff, fm, mf, mm]
+                    let score = evaluateLineage(f, m, [ff, fm, mf, mm], targets);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestCombo = {
+                            mode: 'A', // Input is Father
+                            f: f, m: m,
+                            gps: [ff, fm, mf, mm]
+                        };
+                    }
+                }
+            }
+        }
+
+        // Pattern B: Input is Mother side (m=P, mf=GP1, mm=GP2)
+        // Search Father side (f, ff, fm)
+        // Fixed: m, mf, mm
+        const m = p;
+        const mf = gp1;
+        const mm = gp2;
+
+        for (let fIter of validMonsters) {
+            for (let ffIter of validMonsters) {
+                for (let fmIter of validMonsters) {
+                    // lineage: fIter, m, [ffIter, fmIter, mf, mm]
+                    let score = evaluateLineage(fIter, m, [ffIter, fmIter, mf, mm], targets);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestCombo = {
+                            mode: 'B', // Input is Mother
+                            f: fIter, m: m,
+                            gps: [ffIter, fmIter, mf, mm]
+                        };
+                    }
+                }
+            }
+        }
+
+        loadingDiv.style.display = 'none';
+
+        if (!bestCombo) {
+            resultContainer.innerHTML = '<div style="color:white; padding:10px;">探索結果なし</div>';
+            return;
+        }
+
+        renderMatchingResult(resultContainer, bestCombo, bestScore);
+
+    }, 100);
+}
+
+function renderMatchingResult(container, combo, score) {
+    let html = '';
+
+    // Determine labels based on mode
+    let fLabel = "父親 (相方)";
+    const fClass = ""; // Removed highlight class
+    let mLabel = "母親 (固定)";
+    const mClass = ""; // Removed highlight class
+
+    if (combo.mode === 'A') {
+        // Input was Father (Fixed), Found Mother (Partner)
+        fLabel = "父親 (固定)";
+        mLabel = "母親 (相方)";
+    }
+
+    // Helper to get name
+    const getName = (id) => (id !== null) ? MONSTER_NAMES[id] : '？';
+    const getImg = (id) => (id !== null) ? `images/${MONSTER_NAMES[id]}.png` : '';
+
+    // Reuse render2x3 styled structure but custom labels
+    // We already have combo.f, combo.m, combo.gps = [ff, fm, mf, mm]
+    const fId = combo.f;
+    const mId = combo.m;
+    const [ffId, fmId, mfId, mmId] = combo.gps;
+
+    // Fixed vs Found Logic:
+    // User requested removal of Highlights and "HIT" labels.
+    // We retain structure but simplify visual cues.
+
+    const fIsFound = (combo.mode === 'B');
+    const mIsFound = (combo.mode === 'A');
+
+    html += `
+    <div id="capture-gen-match" style="padding:10px; background:#121212;">
+    <div class="result-card-2x3">
+        <div class="result-header">
+            ${getSymbol(score)} <span style="font-size:1.2rem; margin-left:10px; font-weight:bold;">${score.toFixed(1)}</span>
+            <span style="font-size:0.8rem; color:#aaa; margin-left:10px;">
+                ${fIsFound ? '母側固定 / 父側探索結果' : '父側固定 / 母側探索結果'}
+            </span>
+        </div>
+        
+        <div class="result-parents-grid">
+            <div class="parent-label">父親側</div>
+            <div class="mini-card"><img src="${getImg(fId)}" onerror="this.src=''"><div>父<br>${getName(fId)}</div></div>
+            <div class="mini-card"><img src="${getImg(ffId)}" onerror="this.src=''"><div>祖父<br>${getName(ffId)}</div></div>
+            <div class="mini-card"><img src="${getImg(fmId)}" onerror="this.src=''"><div>祖母<br>${getName(fmId)}</div></div>
+        </div>
+        
+        <div class="result-parents-grid">
+            <div class="parent-label">母親側</div>
+            <div class="mini-card"><img src="${getImg(mId)}" onerror="this.src=''"><div>母<br>${getName(mId)}</div></div>
+            <div class="mini-card"><img src="${getImg(mfId)}" onerror="this.src=''"><div>祖父<br>${getName(mfId)}</div></div>
+            <div class="mini-card"><img src="${getImg(mmId)}" onerror="this.src=''"><div>祖母<br>${getName(mmId)}</div></div>
+        </div>
+    </div>
+    `;
+
+    // --- Append Full List of Scores (User Request) ---
+    // Generate list for the found combination
+    const resultList = [];
+    for (let c = 0; c < MONSTER_NAMES.length; c++) {
+        let s = calculateScore(c, fId, ffId, fmId, mId, mfId, mmId, 0, 0, 0);
+        resultList.push({
+            name: MONSTER_NAMES[c],
+            score: s,
+            symbol: getSymbol(s)
+        });
+    }
+
+    // Sort by score descending (User Request)
+    resultList.sort((a, b) => b.score - a.score);
+
+    // Reuse logic from renderResults to generate grid HTML
+    const listHtml = resultList.map(item => {
+        // Highlight in list if designated
+        const isDesignated = (searchTargetMode === 'designated' && targetBloodlines.has(MONSTER_NAMES.indexOf(item.name)));
+        const highlightClass = isDesignated ? 'designated-highlight' : '';
+
+        return `
+        <div class="result-card ${highlightClass}">
+            <img src="images/${item.name}.png" onerror="this.src=''">
+            <div>${item.name}</div>
+            <div class="result-score">${item.score.toFixed(1)}</div>
+            <div class="result-symbol">${item.symbol}</div>
+        </div>
+    `}).join('');
+
+    html += `
+    <div style="margin-top:20px; font-size:0.9rem; color:#aaa; text-align:center;">全モンスター相性一覧</div>
+    <div class="result-grid">
+        ${listHtml}
+    </div>
+    </div> <!-- Close capture div -->
+    <div style="text-align:center; margin-top:15px;">
+        <button class="save-img-btn" onclick="saveAsImage('capture-gen-match', 'general_matching_result')">📷 画像を保存</button>
+    </div>
+    `;
+
+    container.innerHTML = html;
 }
 
 // --- UI Helpers ---
@@ -509,12 +754,55 @@ function resetInputs(feature) {
         document.getElementById('rev-opt-results').innerHTML = '';
     }
     if (feature === 'gen') {
-        selectedMonsters.gen_ff = null; selectedMonsters.gen_fm = null;
-        selectedMonsters.gen_mf = null; selectedMonsters.gen_mm = null;
+        const mode = document.getElementById('gen_mode').value;
+        if (mode === 'matching') {
+            selectedMonsters.gen_match_p = null;
+            selectedMonsters.gen_match_gp1 = null;
+            selectedMonsters.gen_match_gp2 = null;
+        } else {
+            selectedMonsters.gen_ff = null;
+            selectedMonsters.gen_fm = null;
+            selectedMonsters.gen_mf = null;
+            selectedMonsters.gen_mm = null;
+        }
         document.getElementById('gen-results').innerHTML = '';
     }
     saveToLocalStorage();
     updateAllPlaceholders();
+}
+
+// --- Feature 4 Mode Toggle ---
+function toggleGenMode(mode) {
+    if (!mode) return; // safety
+
+    // Update hidden input
+    document.getElementById('gen_mode').value = mode;
+
+    // Update Tab Styles
+    document.getElementById('tab-gen-gp').classList.toggle('active', mode === 'grandparents');
+    document.getElementById('tab-gen-match').classList.toggle('active', mode === 'matching');
+
+    const gpDiv = document.getElementById('gen-input-grandparents');
+    const matchDiv = document.getElementById('gen-input-matching');
+    const gpLabel = document.getElementById('gen-label-gp');
+    const matchLabel = document.getElementById('gen-label-match');
+
+    // Description is now inside the div, so it toggles automatically with the div.
+    // We just need to ensure the Labels for "Parents" vs "Grandparents" toggle if they are separate.
+
+    if (mode === 'matching') {
+        gpDiv.style.display = 'none';
+        matchDiv.style.display = 'block';
+        gpLabel.style.display = 'none';
+        matchLabel.style.display = 'inline';
+    } else {
+        gpDiv.style.display = 'block';
+        matchDiv.style.display = 'none';
+        gpLabel.style.display = 'inline';
+        matchLabel.style.display = 'none';
+    }
+    // Clear results when switching
+    document.getElementById('gen-results').innerHTML = '';
 }
 
 function render2x3Result(containerId, combo, finalScore, items) {
@@ -534,6 +822,11 @@ function render2x3Result(containerId, combo, finalScore, items) {
     container.innerHTML = `
         <div id="${captureId}" class="result-card-2x3">
             <div class="result-header">
+                ${combo.child != null ? `<div style="margin-bottom:5px; font-size:0.9rem; color:#ccc; display:flex; align-items:center; justify-content:center; gap:6px;">
+                    <span>育成モンスター:</span>
+                    <img src="images/${MONSTER_NAMES[combo.child]}.png" style="width:24px; height:24px; border-radius:4px; vertical-align:middle;">
+                    <span>${MONSTER_NAMES[combo.child]}</span>
+                </div>` : ''}
                 ${getSymbol(finalScore)} <span style="font-size:1.2rem; margin-left:10px; font-weight:bold;">${finalScore.toFixed(1)}</span>
             </div>
             
@@ -553,8 +846,12 @@ function render2x3Result(containerId, combo, finalScore, items) {
             
             ${itemsHTML}
         </div>
-        <div style="text-align:right; margin-top:10px;">
-            <button class="save-img-btn" onclick="saveAsImage('${captureId}', 'opt_result')">📷 画像を保存</button>
+        <div style="text-align:right; margin-top:10px; display:flex; justify-content:flex-end; gap:10px;">
+            <button class="mini-action-btn" 
+                onclick='applyToTyrant(${JSON.stringify(combo)}, ${JSON.stringify(items || {})})'>
+                タイラントツールへ適用
+            </button>
+            <button class="save-img-btn" style="margin-top:0;" onclick="saveAsImage('${captureId}', 'opt_result')">📷 画像を保存</button>
         </div>
     `;
 }
@@ -760,6 +1057,128 @@ function renderResults(containerId, list, context) {
     `;
 }
 
+// --- Target Bloodline Logic ---
+
+function toggleTargetMode() {
+    const radios = document.getElementsByName('target_mode');
+    for (let r of radios) {
+        if (r.checked) {
+            searchTargetMode = r.value;
+            break;
+        }
+    }
+    const selectorArea = document.getElementById('target-selector-area');
+    if (searchTargetMode === 'designated') {
+        selectorArea.style.display = 'block';
+        updateTargetCount();
+    } else {
+        selectorArea.style.display = 'none';
+    }
+}
+
+function openBloodlineModal() {
+    renderBloodlineModal();
+    document.getElementById('bloodline-modal').classList.add('open');
+}
+
+function closeBloodlineModal() {
+    document.getElementById('bloodline-modal').classList.remove('open');
+    updateTargetCount();
+}
+
+function toggleTarget(idx) {
+    if (targetBloodlines.has(idx)) {
+        targetBloodlines.delete(idx);
+    } else {
+        targetBloodlines.add(idx);
+    }
+    renderBloodlineModal(); // re-render to update styles
+    updateTargetCount();
+}
+
+function selectAllTargets() {
+    for (let i = 0; i < MONSTER_NAMES.length; i++) {
+        targetBloodlines.add(i);
+    }
+    renderBloodlineModal();
+    updateTargetCount();
+}
+
+function clearAllTargets() {
+    targetBloodlines.clear();
+    renderBloodlineModal();
+    updateTargetCount();
+}
+
+// Group definitions
+const GROUP_INDICES = {
+    'inorganic': [20, 31, 11, 4, 3],
+    'creation': [12, 9, 27, 29],
+    'phantom': [32, 19, 14, 25, 18, 17],
+    'demon': [1, 22, 26, 13, 16, 0],
+    'beast': [24, 7, 8, 10, 5, 2],
+    'monster': [28, 30, 21, 23, 6, 15]
+};
+
+function selectGroup(groupKey) {
+    const indices = GROUP_INDICES[groupKey];
+    if (!indices) return;
+
+    // logic: Add all.
+    for (let idx of indices) {
+        targetBloodlines.add(idx);
+    }
+    renderBloodlineModal();
+    updateTargetCount();
+}
+
+function renderBloodlineModal() {
+    const grid = document.getElementById('target-grid');
+    grid.innerHTML = '';
+
+    for (let i = 0; i < MONSTER_NAMES.length; i++) {
+        const div = document.createElement('div');
+        div.className = 'modal-item';
+        // highlight if selected
+        if (targetBloodlines.has(i)) {
+            div.style.border = "2px solid var(--accent-color)";
+            div.style.background = "#333";
+        }
+
+        div.onclick = () => toggleTarget(i);
+        div.innerHTML = `
+            <img src="images/${MONSTER_NAMES[i]}.png" style="width:30px;height:30px;display:block;margin-bottom:2px;">
+            <div>${MONSTER_NAMES[i]}</div>
+        `;
+        grid.appendChild(div);
+    }
+
+    document.getElementById('target-count').innerText = `${targetBloodlines.size}体 選択中`;
+}
+
+function updateTargetCount() {
+    // Updates the count on the main screen button
+    const btnCount = document.getElementById('target-btn-count');
+    if (btnCount) btnCount.innerText = `(${targetBloodlines.size})`;
+
+    // Check Icons Preview
+    const previewContainer = document.getElementById('target-icons-preview');
+    if (previewContainer) {
+        previewContainer.innerHTML = '';
+        targetBloodlines.forEach(idx => {
+            const img = document.createElement('img');
+            img.src = `images/${MONSTER_NAMES[idx]}.png`;
+            img.style.width = '30px';
+            img.style.height = '30px';
+            img.style.borderRadius = '4px';
+            img.style.border = '1px solid #555';
+            img.title = MONSTER_NAMES[idx];
+            previewContainer.appendChild(img);
+        });
+    }
+}
+
+
 function saveToLocalStorage() {
     localStorage.setItem('mf_sim_data', JSON.stringify(selectedMonsters));
     localStorage.setItem('mf_sim_excluded', JSON.stringify(Array.from(excludedMonsters)));
@@ -774,4 +1193,45 @@ function loadFromLocalStorage() {
     if (exData) {
         excludedMonsters = new Set(JSON.parse(exData));
     }
+}
+
+function applyToTyrant(combo, items) {
+    if (!combo) return;
+
+    // 1. Set Tyrant Feature State
+    selectedMonsters.gf_f = combo.f;
+    selectedMonsters.gf_ff = combo.ff;
+    selectedMonsters.gf_fm = combo.fm;
+    selectedMonsters.gf_m = combo.m;
+    selectedMonsters.gf_mf = combo.mf;
+    selectedMonsters.gf_mm = combo.mm;
+
+    // 2. Set Items if present
+    if (items) {
+        document.getElementById('secret3').value = items.s3 || 0;
+        document.getElementById('secret2').value = items.s2 || 0;
+        document.getElementById('noble').value = items.noble || 0;
+    } else {
+        document.getElementById('secret3').value = 0;
+        document.getElementById('secret2').value = 0;
+        document.getElementById('noble').value = 0;
+    }
+
+    // 3. Update UI
+    saveToLocalStorage();
+    updateAllPlaceholders();
+    syncSliderLabels();
+
+    // 4. Switch Tab
+    const giftTab = document.querySelector('a[onclick*="tab-gift"]');
+    if (giftTab) giftTab.click();
+
+    // 5. Scroll & Run
+    setTimeout(() => {
+        const tyrantArea = document.getElementById('tyrant-calc');
+        if (tyrantArea) tyrantArea.scrollIntoView({ behavior: 'smooth' });
+
+        // Auto-run calculation
+        runGiftSearch();
+    }, 300);
 }
