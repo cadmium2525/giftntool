@@ -12,7 +12,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#121212">
 
-    <title>Monster Farm Sim</title>
+    <title>LMF ギフトンツール</title>
     <link rel="stylesheet" href="css/style.css?v=2">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -20,7 +20,7 @@
 <body>
 
     <header>
-        <h1>MF Sim</h1>
+        <h1>LMF ギフトンツール</h1>
     </header>
 
     <main>
@@ -267,6 +267,7 @@
                     <!-- Target Mode Toggle (All vs Designated) -->
                     <div style="margin-top:10px; padding:10px; background:#222; border-radius:8px;">
                         <div style="display:flex; justify-content:center; gap:20px;">
+                            <label style="display:block; margin-bottom:5px;">育成対象</label>
                             <label style="cursor:pointer; display:flex; align-items:center;">
                                 <input type="radio" name="target_mode" value="all" checked
                                     onchange="toggleTargetMode()">
@@ -292,8 +293,10 @@
 
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
                         <label style="margin-bottom:10px;">
-                            <span id="gen-label-gp">祖父母を指定</span>
+                            <span id="gen-label-gp">祖父母から探索 (祖父母を指定)</span>
                             <span id="gen-label-match" style="display:none;">片親系統を指定</span>
+                            <span id="gen-note-gp"
+                                style="display:block; font-size:0.8rem; color:#aaa; margin-top:2px;">※2枠まで空欄可</span>
                         </label>
                         <button onclick="resetInputs('gen')"
                             style="font-size:0.75rem; padding:4px 8px; background:#444; border:none; color:#eee; border-radius:4px; cursor:pointer;">リセット</button>
@@ -376,6 +379,39 @@
                 <div id="gen-results" class="result-grid"></div>
         </section>
 
+        <!-- Feature 5: Data Management -->
+        <section id="tab-data">
+            <div class="feature-title">データ管理</div>
+
+            <div class="input-group">
+                <label>パッチ設定</label>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <label style="display:flex; align-items:center; cursor:pointer;">
+                        <input type="checkbox" id="overlay-toggle" onchange="toggleOverlaySetting()">
+                        <span style="margin-left:5px;">パッチ適用ON/OFFスイッチを表示する</span>
+                    </label>
+                </div>
+
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="action-btn" style="flex:1; margin-top:0;" onclick="exportPatch()">エクスポート</button>
+                    <button class="action-btn" style="flex:1; margin-top:0; position:relative;">
+                        インポート
+                        <input type="file" id="patch-file-input" accept=".json"
+                            style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;"
+                            onchange="importPatch(this)">
+                    </button>
+                </div>
+                <button class="action-btn" style="background:#555; margin-top:10px;" onclick="resetPatch()">元の数値に戻す
+                    (リセット)</button>
+            </div>
+
+            <div class="matrix-container">
+                <table class="matrix-table" id="matrix-table">
+                    <!-- JS Injected -->
+                </table>
+            </div>
+        </section>
+
     </main>
 
     <nav class="bottom-nav">
@@ -395,7 +431,17 @@
             <span class="nav-icon">🔍</span>
             <span>汎用探索</span>
         </a>
+        <a class="nav-item" onclick="switchTab('tab-data', this)">
+            <span class="nav-icon">📊</span>
+            <span>データ</span>
+        </a>
     </nav>
+
+    <!-- Overlay -->
+    <div id="patch-overlay" style="display:none;">
+        <div id="patch-toggle-btn" class="patch-toggle-switch" onclick="togglePatchActive()"></div>
+        <span id="patch-status-text">パッチOFF</span>
+    </div>
 
     <!-- Modal -->
     <div id="monster-modal" class="modal">
@@ -451,6 +497,32 @@
                 <button class="modal-close" style="width:auto; display:inline-block;"
                     onclick="closeBloodlineModal()">完了</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Edit Value Modal -->
+    <div id="edit-value-modal" class="modal">
+        <div class="modal-content" style="max-width:300px;">
+            <h3>相性値の変更</h3>
+            <div style="text-align:center; margin-bottom:15px;">
+                <div id="edit-target-label" style="font-size:0.9rem; color:#aaa; margin-bottom:5px;"></div>
+                <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
+                    <img id="edit-child-img" src="" style="width:40px; height:40px;">
+                    <span style="font-size:1.5rem;">⬅</span>
+                    <img id="edit-parent-img" src="" style="width:40px; height:40px;">
+                </div>
+                <div style="font-size:0.75rem; color:#888; margin-top:5px;">(左:子 / 右:親)</div>
+            </div>
+
+            <label>相性値 (0-99)</label>
+            <input type="number" id="edit-val-input" style="font-size:1.2rem; text-align:center;">
+
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="action-btn" onclick="confirmEditValue()">決定</button>
+                <button class="action-btn" style="background:#444;" onclick="closeEditModal()">キャンセル</button>
+            </div>
+            <button class="action-btn" style="background:#553333; margin-top:10px;"
+                onclick="resetEditValue()">元の数値に戻す</button>
         </div>
     </div>
 

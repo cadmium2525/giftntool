@@ -29,7 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAllPlaceholders();
     updateAllPlaceholders();
     updateExclusionCounts();
+    renderExclusionModal();
+    updateAllPlaceholders();
+    updateAllPlaceholders();
+    updateExclusionCounts();
     syncSliderLabels();
+    initPatchSystem(); // Initialize Data/Patch System
 });
 
 function syncSliderLabels() {
@@ -150,61 +155,35 @@ function runOptimization() {
         bestM.push({ id: i, score: mScore, gp: bestGPId });
     }
 
-    let maxTotal = -1;
-    let bestCombo = null;
+    // Collect all candidates
+    let allCandidates = [];
 
     for (let p of bestP) {
         for (let m of bestM) {
             let fmScore = getComb(p.id, m.id);
             let total = p.score + m.score + fmScore + 224;
 
-            if (total > maxTotal) {
-                maxTotal = total;
-                bestCombo = {
-                    f: p.id, ff: p.gp, fm: p.gp,
-                    m: m.id, mf: m.gp, mm: m.gp,
-                    child: childId, // Store child ID
-                    rawScore: total
-                };
-            }
+            allCandidates.push({
+                f: p.id, ff: p.gp, fm: p.gp,
+                m: m.id, mf: m.gp, mm: m.gp,
+                child: childId,
+                rawScore: total
+            });
         }
     }
 
-    if (!bestCombo) {
+    if (allCandidates.length === 0) {
         alert("有効な結果が見つかりませんでした (除外リストを確認してください)");
         return;
     }
 
-    let finalScore = maxTotal;
-    let items = { s3: 0, s2: 0, noble: 0 };
+    // Sort descending
+    allCandidates.sort((a, b) => b.rawScore - a.rawScore);
 
-    if (targetSymbolScore !== 999 && finalScore < targetSymbolScore) {
-        let diff = targetSymbolScore - finalScore;
+    // Top 10
+    const topCombos = allCandidates.slice(0, 10);
 
-        // Use Math.round logic (Consistent with Reverse Search)
-        let s3Part = diff * (12 / 25);
-        let s2Part = diff * (1 / 25);
-
-        let n3 = Math.round(s3Part / 12.5);
-        let n2 = Math.round(s2Part / 5);
-
-        let currentCover = (n3 * 12.5) + (n2 * 5);
-        let remainder = diff - currentCover;
-        let nn = Math.ceil(remainder);
-        if (nn < 0) nn = 0;
-
-        if ((n3 * 12.5) + (n2 * 5) + nn < diff) {
-            nn = Math.ceil(diff - ((n3 * 12.5) + (n2 * 5)));
-        }
-
-        items.s3 = n3;
-        items.s2 = n2;
-        items.noble = nn;
-
-        finalScore += (items.s3 * 12.5) + (items.s2 * 5) + items.noble;
-    }
-
-    render2x3Result('opt-results', bestCombo, finalScore, items);
+    renderTabbedResults('opt-results', topCombos, targetSymbolScore);
 }
 
 // --- Feature 3: Completion Search ---
@@ -275,72 +254,35 @@ function runReverseOpt() {
         return;
     }
 
-    let maxTotal = -1;
-    let best = null;
+    let allCandidates = [];
 
     for (let p of pUnits) {
         for (let m of mUnits) {
             let fmScore = getComb(p.id, m.id);
             let total = p.score + m.score + fmScore + 224;
-            if (total > maxTotal) {
-                maxTotal = total;
-                best = {
-                    f: p.id, ff: p.gp1, fm: p.gp2,
-                    m: m.id, mf: m.gp1, mm: m.gp2,
-                    child: childId, // Store child ID
-                    rawScore: total
-                };
-            }
+
+            allCandidates.push({
+                f: p.id, ff: p.gp1, fm: p.gp2,
+                m: m.id, mf: m.gp1, mm: m.gp2,
+                child: childId,
+                rawScore: total
+            });
         }
     }
 
-    // Calculate items if needed
-    let finalScore = maxTotal;
-    let items = { s3: 0, s2: 0, noble: 0 };
+    if (allCandidates.length === 0) {
+        alert("有効な結果が見つかりませんでした");
+        return;
+    }
+
+    // Sort
+    allCandidates.sort((a, b) => b.rawScore - a.rawScore);
+
+    // Top 10
+    const topCombos = allCandidates.slice(0, 10);
     const targetSymbolScore = Number(document.getElementById('target-symbol-rev').value);
 
-    // Calc helper
-    function calculateItemsNeeded(diff) {
-        // Ratio (Value Contribution): 12 : 1 : 12
-        let s3Part = diff * (12 / 25);
-        let s2Part = diff * (1 / 25);
-
-        // Use Math.round to approximate the target part without over-ceiling
-        let n3 = Math.round(s3Part / 12.5);
-        let n2 = Math.round(s2Part / 5);
-
-        // Calculate current cover
-        let currentCover = (n3 * 12.5) + (n2 * 5);
-        let remainder = diff - currentCover;
-
-        // Fill remainder with Noble (1pt). 
-        // If remainder is negative (overshot), we might have negative Nobles? 
-        // Improve: if remainder negative, try reducing n2 or n3?
-        // Simple approach: Clamp Noble to 0 if remainder is negative, 
-        // but that means we overshot. That's acceptable for "meeting target".
-        // BUT user wants "minimum necessary". 
-        // If we overshot, maybe we should reduce count?
-        // E.g. if diff=10, s3Part=4.8 -> n3=0. s2=0.4 -> n2=0. rem=10. noble=10. (OK)
-        // E.g. diff=15. s3Part=7.2 -> n3=1(12.5). rem=2.5. noble=3. Total 15.5. (OK)
-        // E.g. diff=18. s3Part=8.64 -> n3=1. rem=5.5. noble=6. Total 18.5. (OK)
-
-        let nn = Math.ceil(remainder);
-        if (nn < 0) nn = 0; // Should not happen with round if parts sum to diff, but rounding can overshoot.
-
-        // Re-check total
-        if ((n3 * 12.5) + (n2 * 5) + nn < diff) {
-            nn = Math.ceil(diff - ((n3 * 12.5) + (n2 * 5)));
-        }
-
-        return { s3: n3, s2: n2, noble: nn };
-    }
-
-    if (targetSymbolScore !== 999 && finalScore < targetSymbolScore) {
-        items = calculateItemsNeeded(targetSymbolScore - finalScore);
-        finalScore += (items.s3 * 12.5) + (items.s2 * 5) + items.noble;
-    }
-
-    render2x3Result('rev-opt-results', best, finalScore, items);
+    renderTabbedResults('rev-opt-results', topCombos, targetSymbolScore);
 }
 
 // --- Feature 4: General Search ---
@@ -795,11 +737,13 @@ function toggleGenMode(mode) {
         matchDiv.style.display = 'block';
         gpLabel.style.display = 'none';
         matchLabel.style.display = 'inline';
+        if (document.getElementById('gen-note-gp')) document.getElementById('gen-note-gp').style.display = 'none';
     } else {
         gpDiv.style.display = 'block';
         matchDiv.style.display = 'none';
         gpLabel.style.display = 'inline';
         matchLabel.style.display = 'none';
+        if (document.getElementById('gen-note-gp')) document.getElementById('gen-note-gp').style.display = 'block';
     }
     // Clear results when switching
     document.getElementById('gen-results').innerHTML = '';
@@ -1019,7 +963,7 @@ function renderResults(containerId, list, context) {
         headerHTML = `
         <div style="margin-bottom:15px; padding:5px;">
              <div class="result-card-2x3">
-                <div class="result-header">設定 (秘伝Ⅲ:${context.s3}, 秘伝Ⅱ:${context.s2}, ノーブル:${context.noble})</div>
+                <div class="result-header">設定 (共通秘伝Ⅲ:${context.s3}　共通秘伝Ⅱ:${context.s2}　ノーブル:${context.noble})</div>
                 <div class="result-parents-grid">
                     <div class="parent-label">父親側</div>
                     <div class="mini-card"><img src="images/${MONSTER_NAMES[context.f]}.png" onerror="this.src=''"><div>父<br>${MONSTER_NAMES[context.f]}</div></div>
@@ -1234,4 +1178,483 @@ function applyToTyrant(combo, items) {
         // Auto-run calculation
         runGiftSearch();
     }, 300);
+}
+
+// --- Top 10 & Tab Helpers ---
+
+function calculateItemsForScore(currentScore, targetScore) {
+    if (targetScore === 999 || currentScore >= targetScore) {
+        return { s3: 0, s2: 0, noble: 0, totalScore: currentScore };
+    }
+    let diff = targetScore - currentScore;
+    let s3Part = diff * (12 / 25);
+    let s2Part = diff * (1 / 25);
+    let n3 = Math.round(s3Part / 12.5);
+    let n2 = Math.round(s2Part / 5);
+
+    // Optimization to reduce items if possible (consistent with existing logic)
+    let currentCover = (n3 * 12.5) + (n2 * 5);
+    let remainder = diff - currentCover;
+    let nn = Math.ceil(remainder);
+    if (nn < 0) nn = 0;
+    if ((n3 * 12.5) + (n2 * 5) + nn < diff) {
+        nn = Math.ceil(diff - ((n3 * 12.5) + (n2 * 5)));
+    }
+    return {
+        s3: n3, s2: n2, noble: nn,
+        totalScore: currentScore + (n3 * 12.5) + (n2 * 5) + nn
+    };
+}
+
+window.showResultTab = function (containerId, tabName) {
+    const bestDiv = document.getElementById(`${containerId}-best`);
+    const top10Div = document.getElementById(`${containerId}-top10`);
+    if (bestDiv) bestDiv.style.display = 'none';
+    if (top10Div) top10Div.style.display = 'none';
+
+    const tabs = document.querySelectorAll(`#${containerId}-tabs .sub-tab`);
+    tabs.forEach(t => t.classList.remove('active'));
+
+    const targetDiv = document.getElementById(`${containerId}-${tabName}`);
+    if (targetDiv) targetDiv.style.display = 'block';
+
+    const activeTab = document.querySelector(`#${containerId}-tabs .sub-tab[onclick*="'${tabName}'"]`);
+    if (activeTab) activeTab.classList.add('active');
+}
+
+function generate2x3HTML(containerId, combo, finalScore, items) {
+    let itemsHTML = '';
+    // Normalize items object structure (remove totalScore or keep it, doesn't matter)
+    // The items object usually has { s3, s2, noble }
+    if (items && (items.s3 > 0 || items.s2 > 0 || items.noble > 0)) {
+        itemsHTML = `
+        <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #444; font-size:0.9rem; text-align:center;">
+            <div>推奨共通秘伝数・加算値</div>
+            <div style="color:var(--accent-color); font-weight:bold; margin-top:5px;">
+                共通秘伝Ⅲ：${items.s3}個, 共通秘伝Ⅱ：${items.s2}個, ノーブル秘伝：${items.noble}
+            </div>
+        </div>`;
+    }
+
+    const captureId = `capture-${containerId}`; // Unique capture ID based on container
+    // Note: If we use this for best result, it works.
+
+    return `
+        <div id="${captureId}" class="result-card-2x3">
+            <div class="result-header">
+                ${combo.child != null ? `<div style="margin-bottom:5px; font-size:0.9rem; color:#ccc; display:flex; align-items:center; justify-content:center; gap:6px;">
+                    <span>育成モンスター:</span>
+                    <img src="images/${MONSTER_NAMES[combo.child]}.png" style="width:24px; height:24px; border-radius:4px; vertical-align:middle;">
+                    <span>${MONSTER_NAMES[combo.child]}</span>
+                </div>` : ''}
+                ${getSymbol(finalScore)} <span style="font-size:1.2rem; margin-left:10px; font-weight:bold;">${finalScore.toFixed(1)}</span>
+            </div>
+            
+            <div class="result-parents-grid">
+                <div class="parent-label">父親側</div>
+                <div class="mini-card"><img src="images/${MONSTER_NAMES[combo.f]}.png" onerror="this.src=''"><div>父<br>${MONSTER_NAMES[combo.f]}</div></div>
+                <div class="mini-card"><img src="images/${MONSTER_NAMES[combo.ff]}.png" onerror="this.src=''"><div>祖父<br>${MONSTER_NAMES[combo.ff]}</div></div>
+                <div class="mini-card"><img src="images/${MONSTER_NAMES[combo.fm]}.png" onerror="this.src=''"><div>祖母<br>${MONSTER_NAMES[combo.fm]}</div></div>
+            </div>
+            
+            <div class="result-parents-grid">
+                <div class="parent-label">母親側</div>
+                <div class="mini-card"><img src="images/${MONSTER_NAMES[combo.m]}.png" onerror="this.src=''"><div>母<br>${MONSTER_NAMES[combo.m]}</div></div>
+                <div class="mini-card"><img src="images/${MONSTER_NAMES[combo.mf]}.png" onerror="this.src=''"><div>祖父<br>${MONSTER_NAMES[combo.mf]}</div></div>
+                <div class="mini-card"><img src="images/${MONSTER_NAMES[combo.mm]}.png" onerror="this.src=''"><div>祖母<br>${MONSTER_NAMES[combo.mm]}</div></div>
+            </div>
+            
+            ${itemsHTML}
+        </div>
+        <div style="text-align:right; margin-top:10px; display:flex; justify-content:flex-end; gap:10px;">
+            <button class="mini-action-btn" 
+                onclick='applyToTyrant(${JSON.stringify(combo)}, ${JSON.stringify(items || {})})'>
+                タイラントツールへ適用
+            </button>
+            <button class="save-img-btn" style="margin-top:0;" onclick="saveAsImage('${captureId}', '${containerId}_result')">📷 画像を保存</button>
+        </div>
+    `;
+}
+
+function renderTabbedResults(containerId, topCombos, targetScore) {
+    const container = document.getElementById(containerId);
+
+    // Process Top 10
+    const processed = topCombos.map(c => {
+        const itemRes = calculateItemsForScore(c.rawScore, targetScore);
+        // Clean items object for stringify
+        const itemsClean = { s3: itemRes.s3, s2: itemRes.s2, noble: itemRes.noble };
+        return { ...c, items: itemsClean, finalScore: itemRes.totalScore };
+    });
+
+    const best = processed[0];
+
+    // Generate Best HTML
+    const bestHTML = generate2x3HTML(containerId + '-best-card', best, best.finalScore, best.items);
+
+    // Generate Top 10 List HTML
+    const listHTML = processed.map((p, idx) => {
+        return `
+        <div class="result-card-2x3" style="margin-bottom:10px; border:1px solid #444; padding:10px;">
+             <div class="result-header" style="border-bottom:none; padding-bottom:5px; margin-bottom:5px;">
+                <span style="font-size:1.0rem; font-weight:bold; color:var(--accent-color); margin-right:10px;">TOP ${idx + 1}</span>
+                ${getSymbol(p.finalScore)} ${p.finalScore.toFixed(1)}
+             </div>
+             
+             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:0.8rem; margin-bottom:10px;">
+                 <div style="background:#222; padding:5px; border-radius:4px;">
+                    <div style="color:#888; font-size:0.7rem;">父親側</div>
+                    <div>父: ${MONSTER_NAMES[p.f]}</div>
+                    <div style="font-size:0.7rem; color:#aaa;">(祖: ${MONSTER_NAMES[p.ff]}, ${MONSTER_NAMES[p.fm]})</div>
+                 </div>
+                 <div style="background:#222; padding:5px; border-radius:4px;">
+                    <div style="color:#888; font-size:0.7rem;">母親側</div>
+                    <div>母: ${MONSTER_NAMES[p.m]}</div>
+                    <div style="font-size:0.7rem; color:#aaa;">(祖: ${MONSTER_NAMES[p.mf]}, ${MONSTER_NAMES[p.mm]})</div>
+                 </div>
+             </div>
+             
+             <div style="text-align:center;">
+                  <button class="mini-action-btn" onclick='applyToTyrant(${JSON.stringify(p)}, ${JSON.stringify(p.items)})'>
+                    タイラントツールへ適用
+                  </button>
+             </div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div id="${containerId}-tabs" class="sub-tabs">
+            <div class="sub-tab active" onclick="showResultTab('${containerId}', 'best')">最適となる組合せ</div>
+            <div class="sub-tab" onclick="showResultTab('${containerId}', 'top10')">上位10件の組合せ</div>
+        </div>
+    `;
+}
+
+function renderTabbedResults(containerId, topCombos, targetScore) {
+    const container = document.getElementById(containerId);
+
+    // Process Top 10
+    const processed = topCombos.map(c => {
+        const itemRes = calculateItemsForScore(c.rawScore, targetScore);
+        // Clean items object for stringify
+        const itemsClean = { s3: itemRes.s3, s2: itemRes.s2, noble: itemRes.noble };
+        return { ...c, items: itemsClean, finalScore: itemRes.totalScore };
+    });
+
+    const best = processed[0];
+
+    // Generate Best HTML
+    const bestHTML = generate2x3HTML(containerId + '-best-card', best, best.finalScore, best.items);
+
+    // Generate Top 10 List HTML
+    // Generate Top 10 List HTML
+    const listHTML = processed.map((p, idx) => {
+        let itemsHTML = '';
+        if (p.items && (p.items.s3 > 0 || p.items.s2 > 0 || p.items.noble > 0)) {
+            itemsHTML = `
+            <div style="margin-top:5px; padding-top:5px; border-top:1px dashed #444; font-size:0.8rem; text-align:center;">
+                <div style="color:#ccc;">推奨共通秘伝数・加算値</div>
+                <div style="color:var(--accent-color); font-weight:bold;">
+                    共通秘伝Ⅲ：${p.items.s3}個, 共通秘伝Ⅱ：${p.items.s2}個, ノーブル秘伝：${p.items.noble}
+                </div>
+            </div>`;
+        }
+
+        return `
+        <div class="result-card-2x3" style="margin-bottom:10px; border:1px solid #444; padding:10px;">
+             <div class="result-header" style="border-bottom:none; padding-bottom:5px; margin-bottom:5px;">
+                <span style="font-size:1.0rem; font-weight:bold; color:var(--accent-color); margin-right:10px;">TOP ${idx + 1}</span>
+                ${getSymbol(p.finalScore)} ${p.finalScore.toFixed(1)}
+             </div>
+             
+             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:0.8rem; margin-bottom:10px;">
+                 <div style="background:#222; padding:5px; border-radius:4px;">
+                    <div style="color:#888; font-size:0.7rem;">父親側</div>
+                    <div>父: ${MONSTER_NAMES[p.f]}</div>
+                    <div style="font-size:0.7rem; color:#aaa;">(祖: ${MONSTER_NAMES[p.ff]}, ${MONSTER_NAMES[p.fm]})</div>
+                 </div>
+                 <div style="background:#222; padding:5px; border-radius:4px;">
+                    <div style="color:#888; font-size:0.7rem;">母親側</div>
+                    <div>母: ${MONSTER_NAMES[p.m]}</div>
+                    <div style="font-size:0.7rem; color:#aaa;">(祖: ${MONSTER_NAMES[p.mf]}, ${MONSTER_NAMES[p.mm]})</div>
+                 </div>
+             </div>
+             
+             ${itemsHTML}
+             
+             <div style="text-align:center; margin-top:10px;">
+                  <button class="mini-action-btn" onclick='applyToTyrant(${JSON.stringify(p)}, ${JSON.stringify(p.items)})'>
+                    タイラントツールへ適用
+                  </button>
+             </div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div id="${containerId}-tabs" class="sub-tabs">
+            <div class="sub-tab active" onclick="showResultTab('${containerId}', 'best')">最適となる組合せ</div>
+            <div class="sub-tab" onclick="showResultTab('${containerId}', 'top10')">上位10件の組合せ</div>
+        </div>
+        <div id="${containerId}-best">${bestHTML}</div>
+        <div id="${containerId}-top10" style="display:none;">${listHTML}</div>
+    `;
+}
+
+// --- Data / Patching System ---
+
+let ORIGINAL_MATRIX = null;
+let patchData = {}; // Key: "childIdx-parentIdx", Value: diff (number)
+let isPatchActive = true;
+let isOverlayVisible = false;
+let currentEditTarget = null; // {c, p}
+
+function initPatchSystem() {
+    // 1. Capture Original
+    if (typeof structuredClone === 'function') {
+        ORIGINAL_MATRIX = structuredClone(COMPATIBILITY_MATRIX);
+    } else {
+        // Fallback for older browsers
+        ORIGINAL_MATRIX = JSON.parse(JSON.stringify(COMPATIBILITY_MATRIX));
+    }
+
+    // 2. Load Data
+    const savedPatch = localStorage.getItem('mf_sim_patch_data');
+    if (savedPatch) {
+        try { patchData = JSON.parse(savedPatch); } catch (e) { console.error(e); }
+    }
+
+    const savedOverlay = localStorage.getItem('mf_sim_overlay_visible');
+    if (savedOverlay) {
+        isOverlayVisible = (savedOverlay === 'true');
+    }
+
+    // 3. Apply Patch
+    // Default Active on load? Yes "Auto load last applied..." implies active.
+    applyPatchToMatrix();
+
+    // 4. Update UI
+    document.getElementById('overlay-toggle').checked = isOverlayVisible;
+    updateOverlayUI();
+    renderMatrix();
+}
+
+function applyPatchToMatrix() {
+    // Reset to Original
+    for (let i = 0; i < MONSTER_NAMES.length; i++) {
+        for (let j = 0; j < MONSTER_NAMES.length; j++) {
+            COMPATIBILITY_MATRIX[i][j] = ORIGINAL_MATRIX[i][j];
+        }
+    }
+
+    const body = document.body;
+    const statusText = document.getElementById('patch-status-text');
+    const toggleBtn = document.getElementById('patch-toggle-btn');
+
+    if (isPatchActive) {
+        // Apply Diffs
+        for (let key in patchData) {
+            const [c, p] = key.split('-').map(Number);
+            const diff = patchData[key];
+            if (!Number.isNaN(c) && !Number.isNaN(p)) {
+                COMPATIBILITY_MATRIX[c][p] += diff;
+            }
+        }
+        body.classList.add('patch-active');
+        if (statusText) statusText.innerText = "パッチ適用中";
+        if (statusText) statusText.style.color = "var(--accent-color)";
+        if (toggleBtn) toggleBtn.classList.add('on');
+    } else {
+        body.classList.remove('patch-active');
+        if (statusText) statusText.innerText = "パッチOFF";
+        if (statusText) statusText.style.color = "#aaa";
+        if (toggleBtn) toggleBtn.classList.remove('on');
+    }
+
+    // Update Matrix View if visible?
+    // Optimization: only if data tab is active? 
+    // Just render it.
+    const matrixTable = document.getElementById('matrix-table');
+    if (matrixTable && matrixTable.offsetParent !== null) {
+        renderMatrix();
+    }
+}
+
+function togglePatchActive() {
+    isPatchActive = !isPatchActive;
+    applyPatchToMatrix();
+}
+
+function toggleOverlaySetting() {
+    const cb = document.getElementById('overlay-toggle');
+    isOverlayVisible = cb.checked;
+    localStorage.setItem('mf_sim_overlay_visible', isOverlayVisible);
+    updateOverlayUI();
+}
+
+function updateOverlayUI() {
+    const overlay = document.getElementById('patch-overlay');
+    if (isOverlayVisible) {
+        overlay.style.display = 'flex';
+    } else {
+        overlay.style.display = 'none';
+    }
+}
+
+function renderMatrix() {
+    const table = document.getElementById('matrix-table');
+    if (!table) return;
+
+    // Header
+    let html = '<thead><tr><th class="corner">子\\親</th>';
+    MONSTER_NAMES.forEach(name => {
+        html += `<th><img src="images/${name}.png" style="width:20px;"></th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    // Body
+    MONSTER_NAMES.forEach((childName, cIdx) => {
+        html += `<tr>`;
+        // Row Header
+        html += `<th class="row-header"><img src="images/${childName}.png" style="width:20px;"></th>`;
+
+        MONSTER_NAMES.forEach((parentName, pIdx) => {
+            const currentVal = COMPATIBILITY_MATRIX[cIdx][pIdx];
+            const originalVal = ORIGINAL_MATRIX[cIdx][pIdx];
+            const diff = currentVal - originalVal;
+
+            // Diff display
+            let diffHTML = '';
+            // Only show diff if patch is active AND there is a diff
+            if (isPatchActive && diff !== 0) {
+                const sign = diff > 0 ? '+' : '';
+                const cls = diff < 0 ? 'neg' : '';
+                diffHTML = `<span class="diff-val ${cls}">(${sign}${diff})</span>`;
+            } else if (patchData[`${cIdx}-${pIdx}`] && !isPatchActive) {
+                // Show that a patch exists but inactive? (Optional)
+                // User asked: "view change amount... (0) -> +n"
+                // Let's stick to current active value state.
+            }
+
+            // Cell color?
+            // User requested: "視覚的にわかりやすく" (visually clear)
+            // Maybe colorize based on value?
+            // High value = Gold/Yellow?
+            let bgStyle = '';
+            if (currentVal >= 30) bgStyle = 'background:rgba(255,215,0, 0.1);';
+            if (currentVal >= 35) bgStyle = 'background:rgba(255,215,0, 0.2);';
+            if (currentVal < 20) bgStyle = 'background:rgba(255,0,0, 0.1);';
+
+            html += `<td class="matrix-cell" style="${bgStyle}" onclick="openEditModal(${cIdx}, ${pIdx})">
+                ${currentVal}
+                ${diffHTML}
+            </td>`;
+        });
+        html += `</tr>`;
+    });
+    html += '</tbody>';
+    table.innerHTML = html;
+}
+
+// --- Edit Logic ---
+
+function openEditModal(c, p) {
+    currentEditTarget = { c, p };
+    const currentVal = COMPATIBILITY_MATRIX[c][p];
+
+    document.getElementById('edit-target-label').innerText = `${MONSTER_NAMES[c]} (子) × ${MONSTER_NAMES[p]} (親)`;
+    document.getElementById('edit-child-img').src = `images/${MONSTER_NAMES[c]}.png`;
+    document.getElementById('edit-parent-img').src = `images/${MONSTER_NAMES[p]}.png`;
+
+    document.getElementById('edit-val-input').value = currentVal;
+
+    document.getElementById('edit-value-modal').classList.add('open');
+}
+
+function closeEditModal() {
+    document.getElementById('edit-value-modal').classList.remove('open');
+    currentEditTarget = null;
+}
+
+function confirmEditValue() {
+    if (!currentEditTarget) return;
+    const { c, p } = currentEditTarget;
+    const inputVal = Number(document.getElementById('edit-val-input').value);
+
+    // Calculate Diff relative to ORIGINAL
+    const originalVal = ORIGINAL_MATRIX[c][p];
+    const diff = inputVal - originalVal;
+
+    const key = `${c}-${p}`;
+    if (diff === 0) {
+        delete patchData[key];
+    } else {
+        patchData[key] = diff;
+    }
+
+    // Save
+    localStorage.setItem('mf_sim_patch_data', JSON.stringify(patchData));
+
+    // Apply (If patch mode is inactive, should we activate it? probably yes to see result)
+    if (!isPatchActive) {
+        isPatchActive = true;
+        togglePatchActive(); // This calls apply
+    } else {
+        applyPatchToMatrix();
+    }
+
+    closeEditModal();
+}
+
+function resetEditValue() {
+    if (!currentEditTarget) return;
+    const { c, p } = currentEditTarget;
+    document.getElementById('edit-val-input').value = ORIGINAL_MATRIX[c][p];
+}
+
+function resetPatch() {
+    if (!confirm("現在のパッチを全てリセットし、元の数値に戻しますか？")) return;
+    patchData = {};
+    localStorage.removeItem('mf_sim_patch_data');
+    applyPatchToMatrix();
+}
+
+// --- Export / Import ---
+
+function exportPatch() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(patchData));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "mf_sim_patch.json");
+    document.body.appendChild(downloadAnchorNode); // required for firefox
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+}
+
+function triggerImport() {
+    // handled by label wrapping or onclick delegation in HTML, 
+    // but here we just ensure input is clicked (handled by CSS positioning in button usually)
+    // In HTML I put input inside button.
+}
+
+function importPatch(inputElement) {
+    const file = inputElement.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if (typeof imported === 'object') {
+                patchData = imported;
+                localStorage.setItem('mf_sim_patch_data', JSON.stringify(patchData));
+                applyPatchToMatrix();
+                alert("パッチを読み込みました");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("読み込みエラー: " + err.message);
+        }
+    };
+    reader.readAsText(file);
+    inputElement.value = ''; // Reset
 }
