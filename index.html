@@ -279,6 +279,17 @@
                             </label>
                         </div>
 
+                        <!-- Target Value Slider (For All Bloodlines) -->
+                        <div id="target-val-area" style="margin-top:15px; padding-top:10px; border-top:1px dashed #444;">
+                            <label style="font-size:0.9rem;">目標相性値 (この値を超える数を最大化)</label>
+                            <div style="display:flex; align-items:center; margin-top:5px;">
+                                <input type="range" id="gen-target-val" min="100" max="700" value="420" style="flex:1;"
+                                    oninput="document.getElementById('gen-target-val-disp').innerText = this.value">
+                                <span id="gen-target-val-disp"
+                                    style="width:40px; text-align:right; margin-left:10px; font-weight:bold; color:var(--accent-color);">420</span>
+                            </div>
+                        </div>
+
                         <div id="target-selector-area" style="display:none; margin-top:10px; text-align:center;">
                             <button class="action-btn" style="width:auto; padding:5px 15px; font-size:0.9rem;"
                                 onclick="openBloodlineModal()">

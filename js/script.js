@@ -333,8 +333,22 @@ function runGeneralSearch() {
             targets = null;
         }
 
-        // Helper to calculate min score for a full lineage
+        // Helper to calculate score based on mode
+        const targetVal = Number(document.getElementById('gen-target-val').value);
+
         function evaluateLineage(f, m, gps) {
+            // Mode: All Bloodlines -> Maximize Count >= TargetVal
+            if (searchTargetMode === 'all') {
+                let count = 0;
+                // Loop all
+                for (let c = 0; c < MONSTER_NAMES.length; c++) {
+                    let s = calculateScore(c, f, gps[0], gps[1], m, gps[2], gps[3], 0, 0, 0);
+                    if (s >= targetVal) count++;
+                }
+                return count;
+            } 
+            
+            // Mode: Designated -> Maximize Minimum Score (Floor)
             let minScore = 9999;
             const loopTargets = (targets && targets.length > 0) ? targets : Array.from({ length: MONSTER_NAMES.length }, (_, i) => i);
 
@@ -400,14 +414,19 @@ function runGeneralSearch() {
 
         const ids = bestSolution.gps; // The filled GPs
 
-        // NOTE: We want to capture BOTH the header (recommended pair) and the list (all monsters).
-        // So we wrap them in one div id="capture-gen".
+        // Header Text Logic
+        let headerText = "";
+        if (searchTargetMode === 'all') {
+            headerText = `条件達成 ${bestSolution.val}体 (目標 ${targetVal}〜)`;
+        } else {
+            headerText = `推奨系統 (最低保証 ${bestSolution.val.toFixed(1)})`;
+        }
 
         let contentHTML = `
             <div id="capture-gen" style="padding:10px; background:#121212;">
                 <div style="margin-bottom:15px;">
                      <div class="result-card-2x3">
-                        <div class="result-header">推奨系統 (最低保証 ${bestSolution.val.toFixed(1)})</div>
+                        <div class="result-header">${headerText}</div>
                         <div class="result-parents-grid">
                             <div class="parent-label">父親側</div>
                             <div class="mini-card"><img src="images/${MONSTER_NAMES[bestSolution.f]}.png" onerror="this.src=''"><div>父<br>${MONSTER_NAMES[bestSolution.f]}</div></div>
@@ -433,7 +452,10 @@ function runGeneralSearch() {
 
         let gridHTML = list.map(item => {
             const isDesignated = (searchTargetMode === 'designated' && targetBloodlines.has(item.id));
-            const highlightClass = isDesignated ? 'designated-highlight' : '';
+            // Highlight if designated OR if meeting threshold in 'all' mode
+            let highlightClass = '';
+            if (isDesignated) highlightClass = 'designated-highlight';
+            else if (searchTargetMode === 'all' && item.score >= targetVal) highlightClass = 'designated-highlight'; // Reuse highlight style
 
             return `
             <div class="result-card ${highlightClass}">
@@ -482,7 +504,18 @@ function runMatchingSearch() {
     }
 
     // Helper to calculate min score for a full lineage
+    const targetVal = Number(document.getElementById('gen-target-val').value);
+
     function evaluateLineage(f, m, gps, targets) {
+        if (searchTargetMode === 'all') {
+            let count = 0;
+            for (let c = 0; c < MONSTER_NAMES.length; c++) {
+                let s = calculateScore(c, f, gps[0], gps[1], m, gps[2], gps[3], 0, 0, 0);
+                if (s >= targetVal) count++;
+            }
+            return count;
+        }
+
         let minScore = 9999;
         const loopTargets = (targets && targets.length > 0) ? targets : Array.from({ length: MONSTER_NAMES.length }, (_, i) => i);
 
@@ -592,18 +625,24 @@ function renderMatchingResult(container, combo, score) {
     const mId = combo.m;
     const [ffId, fmId, mfId, mmId] = combo.gps;
 
-    // Fixed vs Found Logic:
-    // User requested removal of Highlights and "HIT" labels.
-    // We retain structure but simplify visual cues.
-
     const fIsFound = (combo.mode === 'B');
     const mIsFound = (combo.mode === 'A');
+
+    // Header Text Logic
+    let headerText = "";
+    const targetVal = Number(document.getElementById('gen-target-val').value);
+
+    if (searchTargetMode === 'all') {
+        headerText = `条件達成 ${score}体 (目標 ${targetVal}〜)`;
+    } else {
+        headerText = `${getSymbol(score)} <span style="font-size:1.2rem; margin-left:10px; font-weight:bold;">${score.toFixed(1)}</span>`;
+    }
 
     html += `
     <div id="capture-gen-match" style="padding:10px; background:#121212;">
     <div class="result-card-2x3">
         <div class="result-header">
-            ${getSymbol(score)} <span style="font-size:1.2rem; margin-left:10px; font-weight:bold;">${score.toFixed(1)}</span>
+            ${headerText}
             <span style="font-size:0.8rem; color:#aaa; margin-left:10px;">
                 ${fIsFound ? '母側固定 / 父側探索結果' : '父側固定 / 母側探索結果'}
             </span>
@@ -642,9 +681,14 @@ function renderMatchingResult(container, combo, score) {
 
     // Reuse logic from renderResults to generate grid HTML
     const listHtml = resultList.map(item => {
-        // Highlight in list if designated
+        // Highlight in list if designated OR meeting threshold in all mode
         const isDesignated = (searchTargetMode === 'designated' && targetBloodlines.has(MONSTER_NAMES.indexOf(item.name)));
-        const highlightClass = isDesignated ? 'designated-highlight' : '';
+        const targetVal = Number(document.getElementById('gen-target-val').value);
+        
+        let highlightClass = isDesignated ? 'designated-highlight' : '';
+        if (searchTargetMode === 'all' && item.score >= targetVal) {
+            highlightClass = 'designated-highlight';
+        }
 
         return `
         <div class="result-card ${highlightClass}">
@@ -1012,11 +1056,15 @@ function toggleTargetMode() {
         }
     }
     const selectorArea = document.getElementById('target-selector-area');
+    const targetValArea = document.getElementById('target-val-area'); // New slider area
+
     if (searchTargetMode === 'designated') {
         selectorArea.style.display = 'block';
+        if(targetValArea) targetValArea.style.display = 'none'; // Hide slider
         updateTargetCount();
     } else {
         selectorArea.style.display = 'none';
+        if(targetValArea) targetValArea.style.display = 'block'; // Show slider
     }
 }
 
