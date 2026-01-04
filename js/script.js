@@ -136,39 +136,71 @@ function runOptimization() {
     let bestP = [];
     let bestM = [];
 
-    for (let i of validMonsters) {
-        let maxGPScore = -1;
-        let bestGPId = -1;
+    // Pool size for grandparents
+    const GP_POOL_SIZE = 5;
 
+    for (let i of validMonsters) {
+        // Calculate GPs for Parent side
+        let gpCandidates = [];
         for (let gp of validMonsters) {
             let val = Math.min(getComb(i, gp), getComb(childId, gp));
-            if (val > maxGPScore) {
-                maxGPScore = val;
-                bestGPId = gp;
+            gpCandidates.push({ id: gp, score: val });
+        }
+        // Sort distinct GPs by score desc
+        gpCandidates.sort((a, b) => b.score - a.score);
+        // Keep top N
+        let topGPs = gpCandidates.slice(0, GP_POOL_SIZE);
+
+        if (topGPs.length === 0) continue;
+
+        // Generate Top Tuples (GP1, GP2)
+        // Permutate Top GPs (5x5 = 25) to allow distinct grandparents
+        let tuples = [];
+        let base = getComb(childId, i);
+
+        for (let g1 of topGPs) {
+            for (let g2 of topGPs) {
+                tuples.push({
+                    gp1: g1.id,
+                    gp2: g2.id,
+                    score: g1.score + g2.score
+                });
             }
         }
+        // Sort tuples, keep Top N
+        tuples.sort((a, b) => b.score - a.score);
+        let bestTuples = tuples.slice(0, GP_POOL_SIZE);
 
-        let pScore = getComb(childId, i) + (maxGPScore * 2);
-        bestP.push({ id: i, score: pScore, gp: bestGPId });
-
-        let mScore = getComb(childId, i) + (maxGPScore * 2);
-        bestM.push({ id: i, score: mScore, gp: bestGPId });
+        // Store
+        bestP.push({ id: i, baseScore: base, tuples: bestTuples });
+        bestM.push({ id: i, baseScore: base, tuples: bestTuples });
     }
 
     // Collect all candidates
     let allCandidates = [];
 
+    // Optimization: To avoid 400*400*25 loop freezing UI, we could sort bestP/bestM by their 'best potential' first?
+    // But we need exhaustive search for top 10.
+    // 400*400*25 = 4M. Should be fine.
+
     for (let p of bestP) {
         for (let m of bestM) {
             let fmScore = getComb(p.id, m.id);
-            let total = p.score + m.score + fmScore + 224;
+            let baseTotal = p.baseScore + m.baseScore + fmScore + 224;
 
-            allCandidates.push({
-                f: p.id, ff: p.gp, fm: p.gp,
-                m: m.id, mf: m.gp, mm: m.gp,
-                child: childId,
-                rawScore: total
-            });
+            // Iterate through top Tuples for both
+            for (let t1 of p.tuples) {
+                for (let t2 of m.tuples) {
+                    let total = baseTotal + t1.score + t2.score;
+
+                    allCandidates.push({
+                        f: p.id, ff: t1.gp1, fm: t1.gp2,
+                        m: m.id, mf: t2.gp1, mm: t2.gp2,
+                        child: childId,
+                        rawScore: total
+                    });
+                }
+            }
         }
     }
 
@@ -208,6 +240,9 @@ function runReverseOpt() {
         if (!excludedMonsters.has(i)) validMonsters.push(i);
     }
 
+    // Config: How many candidates to keep per parent-slot
+    const GP_POOL_SIZE = 5;
+
     function getBestUnit(isMother) {
         let p = isMother ? slots.m : slots.f;
         let gp1 = isMother ? slots.mf : slots.ff;
@@ -219,29 +254,57 @@ function runReverseOpt() {
         for (let i of pList) {
             if (p === null && excludedMonsters.has(i)) continue;
 
+            // Get Top GP1s
             let gp1List = (gp1 !== null) ? [gp1] : validMonsters;
-            let maxGP1 = -1, bestGP1 = null;
+            let gp1Candidates = [];
             for (let g of gp1List) {
                 let val = Math.min(getComb(i, g), getComb(childId, g));
-                if (val > maxGP1) { maxGP1 = val; bestGP1 = g; }
+                gp1Candidates.push({ id: g, score: val });
             }
+            gp1Candidates.sort((a, b) => b.score - a.score);
+            let topGP1 = gp1Candidates.slice(0, GP_POOL_SIZE);
 
+            // Get Top GP2s
             let gp2List = (gp2 !== null) ? [gp2] : validMonsters;
-            let maxGP2 = -1, bestGP2 = null;
+            let gp2Candidates = [];
             for (let g of gp2List) {
                 let val = Math.min(getComb(i, g), getComb(childId, g));
-                if (val > maxGP2) { maxGP2 = val; bestGP2 = g; }
+                gp2Candidates.push({ id: g, score: val });
             }
+            gp2Candidates.sort((a, b) => b.score - a.score);
+            let topGP2 = gp2Candidates.slice(0, GP_POOL_SIZE);
 
-            if (bestGP1 === null || bestGP2 === null) continue;
+            if (topGP1.length === 0 || topGP2.length === 0) continue;
 
+            // Generate Top Tuples (GP1, GP2) for this Parent i
+            // We want the best 5 combinations of (GP1, GP2)
+            let parentTuples = [];
             let base = getComb(childId, i);
-            candidates.push({
-                id: i,
-                gp1: bestGP1,
-                gp2: bestGP2,
-                score: base + maxGP1 + maxGP2
-            });
+
+            for (let g1 of topGP1) {
+                for (let g2 of topGP2) {
+                    // Score = Base + GP1Score + GP2Score
+                    // Note: This does not check for GP1 != GP2 here, assuming game allows it or user checks conflicts.
+                    // But if we want to be safe against self-overlap:
+                    // if (g1.id === g2.id && gp1 === null && gp2 === null) continue; // Optional?
+                    // User request implies "don't miss optimal", allowing overlap might be optimal stat-wise but invalid rule-wise.
+                    // I will leave it open (allow overlap) to maximize finding high stats, user can exclude if needed.
+                    // Exception: If `excludedMonsters` handles it (already done).
+
+                    parentTuples.push({
+                        id: i,
+                        gp1: g1.id,
+                        gp2: g2.id,
+                        score: base + g1.score + g2.score
+                    });
+                }
+            }
+            // Sort tuples
+            parentTuples.sort((a, b) => b.score - a.score);
+
+            // Keep Top N tuples for this parent
+            // Pushing flattened candidates
+            candidates.push(...parentTuples.slice(0, GP_POOL_SIZE));
         }
         return candidates;
     }
@@ -253,6 +316,10 @@ function runReverseOpt() {
         alert("探索候補が見つかりませんでした");
         return;
     }
+
+    // Optimization: Sort units globally by score to potentially trim tail?
+    // Not strictly needed if N is small (5). 400 * 5 = 2000 units.
+    // 2000 * 2000 = 4,000,000 iterations. OK.
 
     let allCandidates = [];
 
@@ -346,8 +413,8 @@ function runGeneralSearch() {
                     if (s >= targetVal) count++;
                 }
                 return count;
-            } 
-            
+            }
+
             // Mode: Designated -> Maximize Minimum Score (Floor)
             let minScore = 9999;
             const loopTargets = (targets && targets.length > 0) ? targets : Array.from({ length: MONSTER_NAMES.length }, (_, i) => i);
@@ -684,7 +751,7 @@ function renderMatchingResult(container, combo, score) {
         // Highlight in list if designated OR meeting threshold in all mode
         const isDesignated = (searchTargetMode === 'designated' && targetBloodlines.has(MONSTER_NAMES.indexOf(item.name)));
         const targetVal = Number(document.getElementById('gen-target-val').value);
-        
+
         let highlightClass = isDesignated ? 'designated-highlight' : '';
         if (searchTargetMode === 'all' && item.score >= targetVal) {
             highlightClass = 'designated-highlight';
@@ -1060,11 +1127,11 @@ function toggleTargetMode() {
 
     if (searchTargetMode === 'designated') {
         selectorArea.style.display = 'block';
-        if(targetValArea) targetValArea.style.display = 'none'; // Hide slider
+        if (targetValArea) targetValArea.style.display = 'none'; // Hide slider
         updateTargetCount();
     } else {
         selectorArea.style.display = 'none';
-        if(targetValArea) targetValArea.style.display = 'block'; // Show slider
+        if (targetValArea) targetValArea.style.display = 'block'; // Show slider
     }
 }
 
