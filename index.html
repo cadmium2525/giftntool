@@ -26,15 +26,14 @@
     <main>
         <!-- Feature 1: Gift & Tyrant -->
         <section id="tab-gift" class="active">
-            <div class="iframe-container">
-                <iframe src="https://monster-farm-simulator.onrender.com" title="MF Simulator"></iframe>
-                <button class="floating-scroll-btn"
-                    onclick="document.getElementById('tyrant-calc').scrollIntoView({behavior: 'smooth'})">
-                    ⬇ タイラントへ
-                </button>
-            </div>
+            <details class="iframe-details">
+                <summary class="iframe-summary">ギフトンツール (クリックで開閉)</summary>
+                <div class="iframe-container">
+                    <iframe src="https://monster-farm-simulator.onrender.com" title="MF Simulator"></iframe>
+                </div>
+            </details>
 
-            <div id="tyrant-calc" class="feature-title">ギフトン＆タイラント</div>
+            <div id="tyrant-calc" class="feature-title">タイラントツール</div>
 
             <!-- 1. Parents Input First -->
             <div class="input-group">
@@ -87,20 +86,53 @@
             <!-- 2. Items Second -->
             <div class="input-group">
                 <label>共通秘伝・加算値</label>
-                <div style="margin-top:10px;">
+                <div class="slider-container">
                     <label>共通秘伝III (<span id="v3-val">0</span>個)</label>
-                    <input type="range" id="secret3" min="0" max="20" value="0"
-                        oninput="document.getElementById('v3-val').innerText = this.value">
+                    <div class="slider-wrapper">
+                        <button class="adjust-btn" onclick="adjustSlider('secret3', -1)">-1</button>
+                        <div class="slider-track-container">
+                            <input type="range" id="secret3" min="0" max="20" value="0" list="list-secret3"
+                                oninput="document.getElementById('v3-val').innerText = this.value">
+                            <div class="slider-markers">
+                                <span class="marker-label" style="left: 0%">0</span>
+                                <span class="marker-label" style="left: 50%">10</span>
+                                <span class="marker-label" style="left: 100%">20</span>
+                            </div>
+                        </div>
+                        <button class="adjust-btn" onclick="adjustSlider('secret3', 1)">+1</button>
+                    </div>
                 </div>
-                <div style="margin-top:10px;">
+                <div class="slider-container">
                     <label>共通秘伝II (<span id="v2-val">0</span>個)</label>
-                    <input type="range" id="secret2" min="0" max="20" value="0"
-                        oninput="document.getElementById('v2-val').innerText = this.value">
+                    <div class="slider-wrapper">
+                        <button class="adjust-btn" onclick="adjustSlider('secret2', -1)">-1</button>
+                        <div class="slider-track-container">
+                            <input type="range" id="secret2" min="0" max="20" value="0" list="list-secret2"
+                                oninput="document.getElementById('v2-val').innerText = this.value">
+                            <div class="slider-markers">
+                                <span class="marker-label" style="left: 0%">0</span>
+                                <span class="marker-label" style="left: 50%">10</span>
+                                <span class="marker-label" style="left: 100%">20</span>
+                            </div>
+                        </div>
+                        <button class="adjust-btn" onclick="adjustSlider('secret2', 1)">+1</button>
+                    </div>
                 </div>
-                <div style="margin-top:10px;">
+                <div class="slider-container">
                     <label>ノーブル加算値 (<span id="noble-val">0</span>)</label>
-                    <input type="range" id="noble" min="0" max="300" value="0"
-                        oninput="document.getElementById('noble-val').innerText = this.value">
+                    <div class="slider-wrapper">
+                        <button class="adjust-btn" onclick="adjustSlider('noble', -1)">-1</button>
+                        <div class="slider-track-container">
+                            <input type="range" id="noble" min="0" max="300" value="0" list="list-noble"
+                                oninput="document.getElementById('noble-val').innerText = this.value">
+                            <div class="slider-markers">
+                                <span class="marker-label" style="left: 0%">0</span>
+                                <span class="marker-label" style="left: 50%">150</span>
+                                <span class="marker-label" style="left: 100%">300</span>
+                            </div>
+                        </div>
+                        <button class="adjust-btn" onclick="adjustSlider('noble', 1)">+1</button>
+                    </div>
                 </div>
             </div>
 
@@ -280,7 +312,8 @@
                         </div>
 
                         <!-- Target Value Slider (For All Bloodlines) -->
-                        <div id="target-val-area" style="margin-top:15px; padding-top:10px; border-top:1px dashed #444;">
+                        <div id="target-val-area"
+                            style="margin-top:15px; padding-top:10px; border-top:1px dashed #444;">
                             <label style="font-size:0.9rem;">目標相性値 (この値を超える数を最大化)</label>
                             <div style="display:flex; align-items:center; margin-top:5px;">
                                 <input type="range" id="gen-target-val" min="100" max="700" value="420" style="flex:1;"

@@ -1773,3 +1773,24 @@ function importPatch(inputElement) {
     reader.readAsText(file);
     inputElement.value = ''; // Reset
 }
+
+// --- Slider Helper ---
+function adjustSlider(id, delta) {
+    const input = document.getElementById(id);
+    if (!input) return;
+
+    let val = Number(input.value);
+    let step = Number(input.step) || 1;
+    let min = Number(input.min);
+    let max = Number(input.max);
+
+    let newVal = val + (delta * step);
+
+    if (newVal < min) newVal = min;
+    if (newVal > max) newVal = max;
+
+    input.value = newVal;
+    
+    // Trigger input event
+    input.dispatchEvent(new Event('input'));
+}

@@ -674,3 +674,123 @@ body.patch-active {
 body {
     min-height: 100vh;
 }
+
+/* Improvements: Collapsible Iframe & Sliders */
+.iframe-details {
+    margin-bottom: 20px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.iframe-summary {
+    padding: 15px;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--accent-color);
+    text-align: center;
+    list-style: none;
+    user-select: none;
+}
+
+.iframe-summary::-webkit-details-marker {
+    display: none;
+}
+
+.iframe-summary:hover {
+    background: #2a2a2a;
+}
+
+/* When open, remove bottom border of wrapper if desired, currently keeps border */
+.iframe-details[open] .iframe-summary {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.iframe-details[open] .iframe-container {
+    height: 85vh;
+    margin-bottom: 0;
+    border: none;
+    /* container border removal if any */
+}
+
+/* Slider Controls */
+.slider-container {
+    margin-top: 15px;
+}
+
+.slider-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.slider-wrapper input[type="range"] {
+    flex: 1;
+    margin: 0;
+}
+
+.adjust-btn {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    background: var(--accent-color);
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    user-select: none;
+    border-radius: 4px;
+}
+
+.adjust-btn:hover {
+    opacity: 0.8;
+}
+
+.adjust-btn:active {
+    transform: scale(0.95);
+}
+
+.slider-track-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    /* Ensure input takes full width */
+}
+
+/* Slider Markers */
+.slider-markers {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: #666;
+    margin-top: -5px;
+    padding: 0 10px;
+    /* Aligned with estimated thumb radius/inset */
+    position: relative;
+    height: 15px;
+}
+
+/* Clear old commented out block and duplicate class */
+.marker-label {
+    position: absolute;
+    transform: translateX(-50%);
+    text-align: center;
+    top: 0;
+}
+
+.marker-label::before {
+    content: '|';
+    display: block;
+    font-size: 0.6rem;
+    color: #444;
+    margin-bottom: -2px;
+}
