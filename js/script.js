@@ -1074,7 +1074,7 @@ function renderResults(containerId, list, context) {
         headerHTML = `
         <div style="margin-bottom:15px; padding:5px;">
              <div class="result-card-2x3">
-                <div class="result-header">設定 (共通秘伝Ⅲ:${context.s3}　共通秘伝Ⅱ:${context.s2}　ノーブル:${context.noble})</div>
+                <div class="result-header"> 共通秘伝Ⅲ:${context.s3}　共通秘伝Ⅱ:${context.s2}　ノーブル:${context.noble}</div>
                 <div class="result-parents-grid">
                     <div class="parent-label">父親側</div>
                     <div class="mini-card"><img src="images/${MONSTER_NAMES[context.f]}.png" onerror="this.src=''"><div>父<br>${MONSTER_NAMES[context.f]}</div></div>
