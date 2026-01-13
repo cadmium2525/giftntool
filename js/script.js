@@ -34,7 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAllPlaceholders();
     updateExclusionCounts();
     syncSliderLabels();
+    syncSliderLabels();
     initPatchSystem(); // Initialize Data/Patch System
+    initNobleData();
 });
 
 function syncSliderLabels() {
@@ -87,7 +89,12 @@ function getSymbol(score) {
 function runGiftSearch() {
     const s3 = Number(document.getElementById('secret3').value);
     const s2 = Number(document.getElementById('secret2').value);
-    const noble = Number(document.getElementById('noble').value);
+    let nobleInput = Number(document.getElementById('noble').value);
+    let noble = nobleInput;
+    if (nobleMode === 'star') {
+        if (nobleInput === 0) noble = 0;
+        else noble = currentNobleData[nobleInput] || 0;
+    }
 
     const ids = [selectedMonsters.gf_f, selectedMonsters.gf_ff, selectedMonsters.gf_fm,
     selectedMonsters.gf_m, selectedMonsters.gf_mf, selectedMonsters.gf_mm];
@@ -386,9 +393,9 @@ function runGeneralSearch() {
 
     // Defer execution to allow UI to render
     setTimeout(() => {
-        // Search state
         let maxMinScore = -1;
         let bestSolution = null;
+        let topCombos = [];
 
         // Determine targets
         let targets = null;
@@ -441,6 +448,8 @@ function runGeneralSearch() {
                     // Clone currentGPs because it's reused
                     bestSolution = { f: f, m: m, gps: [...currentGPs], val: val };
                 }
+                // Also add to topCombos
+                topCombos.push({ f: f, m: m, gps: [...currentGPs], val: val });
                 return;
             }
 
@@ -470,78 +479,17 @@ function runGeneralSearch() {
         // Search Complete - hide loading
         loadingDiv.style.display = 'none';
 
-        if (!bestSolution) {
+        if (topCombos.length === 0) {
             alert("有効な結果が見つかりませんでした");
             return;
         }
 
-        const container = document.getElementById('gen-results');
-        // FIX: Remove grid class from container to avoid layout breakage
-        container.classList.remove('result-grid');
+        // Sort topCombos by score (val) descending
+        topCombos.sort((a, b) => b.val - a.val);
+        if (topCombos.length > 10) topCombos = topCombos.slice(0, 10);
 
-        const ids = bestSolution.gps; // The filled GPs
-
-        // Header Text Logic
-        let headerText = "";
-        if (searchTargetMode === 'all') {
-            headerText = `条件達成 ${bestSolution.val}体 (目標 ${targetVal}〜)`;
-        } else {
-            headerText = `推奨系統 (最低保証 ${bestSolution.val.toFixed(1)})`;
-        }
-
-        let contentHTML = `
-            <div id="capture-gen" style="padding:10px; background:#121212;">
-                <div style="margin-bottom:15px;">
-                     <div class="result-card-2x3">
-                        <div class="result-header">${headerText}</div>
-                        <div class="result-parents-grid">
-                            <div class="parent-label">父親側</div>
-                            <div class="mini-card"><img src="images/${MONSTER_NAMES[bestSolution.f]}.png" onerror="this.src=''"><div>父<br>${MONSTER_NAMES[bestSolution.f]}</div></div>
-                            <div class="mini-card"><img src="images/${MONSTER_NAMES[ids[0]]}.png" onerror="this.src=''"><div>祖父<br>${MONSTER_NAMES[ids[0]]}</div></div>
-                            <div class="mini-card"><img src="images/${MONSTER_NAMES[ids[1]]}.png" onerror="this.src=''"><div>祖母<br>${MONSTER_NAMES[ids[1]]}</div></div>
-                        </div>
-                        <div class="result-parents-grid">
-                            <div class="parent-label">母親側</div>
-                            <div class="mini-card"><img src="images/${MONSTER_NAMES[bestSolution.m]}.png" onerror="this.src=''"><div>母<br>${MONSTER_NAMES[bestSolution.m]}</div></div>
-                            <div class="mini-card"><img src="images/${MONSTER_NAMES[ids[2]]}.png" onerror="this.src=''"><div>祖父<br>${MONSTER_NAMES[ids[2]]}</div></div>
-                            <div class="mini-card"><img src="images/${MONSTER_NAMES[ids[3]]}.png" onerror="this.src=''"><div>祖母<br>${MONSTER_NAMES[ids[3]]}</div></div>
-                        </div>
-                    </div>
-                </div>
-        `;
-
-        let list = [];
-        for (let c = 0; c < MONSTER_NAMES.length; c++) {
-            let s = calculateScore(c, bestSolution.f, ids[0], ids[1], bestSolution.m, ids[2], ids[3], 0, 0, 0);
-            list.push({ id: c, name: MONSTER_NAMES[c], score: s, symbol: getSymbol(s) });
-        }
-        list.sort((a, b) => b.score - a.score);
-
-        let gridHTML = list.map(item => {
-            const isDesignated = (searchTargetMode === 'designated' && targetBloodlines.has(item.id));
-            // Highlight if designated OR if meeting threshold in 'all' mode
-            let highlightClass = '';
-            if (isDesignated) highlightClass = 'designated-highlight';
-            else if (searchTargetMode === 'all' && item.score >= targetVal) highlightClass = 'designated-highlight'; // Reuse highlight style
-
-            return `
-            <div class="result-card ${highlightClass}">
-                <img src="images/${item.name}.png" onerror="this.src=''">
-                <div>${item.name}</div>
-                <div class="result-score">${item.score.toFixed(1)}</div>
-                <div class="result-symbol">${item.symbol}</div>
-            </div>
-        `}).join('');
-
-        contentHTML += `
-                <div class="result-grid" style="margin-top:0;">${gridHTML}</div>
-            </div>
-            <div style="text-align:center; margin-top:15px;">
-                <button class="save-img-btn" onclick="saveAsImage('capture-gen', 'general_search_result')">📷 画像を保存</button>
-            </div>
-        `;
-
-        container.innerHTML = contentHTML;
+        // Use renderGeneralTabbedResults for consistency
+        renderGeneralTabbedResults('gen-results', topCombos, targetVal);
 
     }, 50); // Small delay to let UI render loading spinner
 }
@@ -605,7 +553,8 @@ function runMatchingSearch() {
         }
 
         let bestScore = -1;
-        let bestCombo = null; // { mode: 'A'|'B', partnerP, partnerGP1, partnerGP2, fullLineage }
+        let bestCombo = null;
+        let topCombos = [];
 
         // Pattern A: Input is Father side (f=P, ff=GP1, fm=GP2)
         // Search Mother side (m, mf, mm)
@@ -624,9 +573,16 @@ function runMatchingSearch() {
                         bestCombo = {
                             mode: 'A', // Input is Father
                             f: f, m: m,
-                            gps: [ff, fm, mf, mm]
+                            gps: [ff, fm, mf, mm],
+                            val: score
                         };
                     }
+                    topCombos.push({
+                        mode: 'A',
+                        f: f, m: m,
+                        gps: [ff, fm, mf, mm],
+                        val: score
+                    });
                 }
             }
         }
@@ -646,24 +602,36 @@ function runMatchingSearch() {
                     if (score > bestScore) {
                         bestScore = score;
                         bestCombo = {
-                            mode: 'B', // Input is Mother
+                            mode: 'B',
                             f: fIter, m: m,
-                            gps: [ffIter, fmIter, mf, mm]
+                            gps: [ffIter, fmIter, mf, mm],
+                            val: score
                         };
                     }
+                    // Add to top list
+                    topCombos.push({
+                        mode: 'B',
+                        f: fIter, m: m,
+                        gps: [ffIter, fmIter, mf, mm],
+                        val: score
+                    });
                 }
             }
         }
 
+
         loadingDiv.style.display = 'none';
 
-        if (!bestCombo) {
-            resultContainer.innerHTML = '<div style="color:white; padding:10px;">探索結果なし</div>';
-            return;
+        if (bestCombo) {
+            // Sort topCombos by score (val) descending
+            topCombos.sort((a, b) => b.val - a.val);
+            if (topCombos.length > 10) topCombos = topCombos.slice(0, 10);
+
+            // Use renderGeneralTabbedResults for consistency
+            renderGeneralTabbedResults('gen-results', topCombos, targetVal);
+        } else {
+            document.getElementById('gen-results').innerHTML = '<div style="text-align:center; padding:20px; color:#888;">条件を満たす組合せが見つかりませんでした。</div>';
         }
-
-        renderMatchingResult(resultContainer, bestCombo, bestScore);
-
     }, 100);
 }
 
@@ -1044,21 +1012,31 @@ function saveAsImage(elementId, fileName) {
     // Spec says "capture result". Usually buttons are excluded, but let's keep it simple first.
     // If we want to exclude, we can use 'ignoreElements' callback.
 
-    // Use CORS and allowTaint to try and fix "security error" or missing images
-    // Also use logging to see what happens
+    // Use logging to see what happens
     html2canvas(element, {
         backgroundColor: "#1e1e1e", // Match card-bg or bg-color
         scale: 2, // High res
-        useCORS: true,
-        logging: true
+        logging: false
     }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `${fileName}.png`;
-        link.href = canvas.toDataURL();
-        link.click();
+        try {
+            const link = document.createElement('a');
+            link.download = `${fileName}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        } catch (e) {
+            if (e.name === "SecurityError") {
+                alert("【画像の保存に失敗しました】\n\nローカルファイル(file://)から直接実行している場合、ブラウザのセキュリティ制限により画像を保存できません。\n\n解決策：\n1. ローカルサーバー(VSCodeのLive Server等)を使用する\n2. OSのスクリーンショット機能を使用する");
+            } else {
+                throw e;
+            }
+        }
     }).catch(err => {
         console.error("Image save failed:", err);
-        alert("画像の保存に失敗しました: " + err.message);
+        if (err.name === "SecurityError" || err.message.includes("Tainted")) {
+            alert("【画像の保存に失敗しました】\n\nローカルファイル(file://)から直接実行している場合、ブラウザのセキュリティ制限により画像を保存できません。\n\n解決策：\n1. ローカルサーバー(VSCodeのLive Server等)を使用する\n2. OSのスクリーンショット機能を使用する");
+        } else {
+            alert("画像の保存に失敗しました: " + err.message);
+        }
     });
 }
 
@@ -1258,12 +1236,21 @@ function applyToTyrant(combo, items) {
     if (!combo) return;
 
     // 1. Set Tyrant Feature State
+    // 1. Set Tyrant Feature State
     selectedMonsters.gf_f = combo.f;
-    selectedMonsters.gf_ff = combo.ff;
-    selectedMonsters.gf_fm = combo.fm;
+    // Check for gps array (General Search) or direct props (Optimal Search)
+    if (combo.gps && Array.isArray(combo.gps) && combo.gps.length === 4) {
+        selectedMonsters.gf_ff = combo.gps[0];
+        selectedMonsters.gf_fm = combo.gps[1];
+        selectedMonsters.gf_mf = combo.gps[2];
+        selectedMonsters.gf_mm = combo.gps[3];
+    } else {
+        selectedMonsters.gf_ff = combo.ff;
+        selectedMonsters.gf_fm = combo.fm;
+        selectedMonsters.gf_mf = combo.mf;
+        selectedMonsters.gf_mm = combo.mm;
+    }
     selectedMonsters.gf_m = combo.m;
-    selectedMonsters.gf_mf = combo.mf;
-    selectedMonsters.gf_mm = combo.mm;
 
     // 2. Set Items if present
     if (items) {
@@ -1409,99 +1396,13 @@ function renderTabbedResults(containerId, topCombos, targetScore) {
 
     // Generate Top 10 List HTML
     const listHTML = processed.map((p, idx) => {
-        return `
-        <div class="result-card-2x3" style="margin-bottom:10px; border:1px solid #444; padding:10px;">
-             <div class="result-header" style="border-bottom:none; padding-bottom:5px; margin-bottom:5px;">
-                <span style="font-size:1.0rem; font-weight:bold; color:var(--accent-color); margin-right:10px;">TOP ${idx + 1}</span>
-                ${getSymbol(p.finalScore)} ${p.finalScore.toFixed(1)}
-             </div>
-             
-             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:0.8rem; margin-bottom:10px;">
-                 <div style="background:#222; padding:5px; border-radius:4px;">
-                    <div style="color:#888; font-size:0.7rem;">父親側</div>
-                    <div>父: ${MONSTER_NAMES[p.f]}</div>
-                    <div style="font-size:0.7rem; color:#aaa;">(祖: ${MONSTER_NAMES[p.ff]}, ${MONSTER_NAMES[p.fm]})</div>
-                 </div>
-                 <div style="background:#222; padding:5px; border-radius:4px;">
-                    <div style="color:#888; font-size:0.7rem;">母親側</div>
-                    <div>母: ${MONSTER_NAMES[p.m]}</div>
-                    <div style="font-size:0.7rem; color:#aaa;">(祖: ${MONSTER_NAMES[p.mf]}, ${MONSTER_NAMES[p.mm]})</div>
-                 </div>
-             </div>
-             
-             <div style="text-align:center;">
-                  <button class="mini-action-btn" onclick='applyToTyrant(${JSON.stringify(p)}, ${JSON.stringify(p.items)})'>
-                    タイラントツールへ適用
-                  </button>
-             </div>
-        </div>`;
-    }).join('');
+        // Reuse generate2x3HTML logic for consistency (Icon Style)
+        // Add #Rank label wrapper
+        const cardHTML = generate2x3HTML(`top10-${idx}`, p, p.finalScore, p.items);
 
-    container.innerHTML = `
-        <div id="${containerId}-tabs" class="sub-tabs">
-            <div class="sub-tab active" onclick="showResultTab('${containerId}', 'best')">最適となる組合せ</div>
-            <div class="sub-tab" onclick="showResultTab('${containerId}', 'top10')">上位10件の組合せ</div>
-        </div>
-    `;
-}
-
-function renderTabbedResults(containerId, topCombos, targetScore) {
-    const container = document.getElementById(containerId);
-
-    // Process Top 10
-    const processed = topCombos.map(c => {
-        const itemRes = calculateItemsForScore(c.rawScore, targetScore);
-        // Clean items object for stringify
-        const itemsClean = { s3: itemRes.s3, s2: itemRes.s2, noble: itemRes.noble };
-        return { ...c, items: itemsClean, finalScore: itemRes.totalScore };
-    });
-
-    const best = processed[0];
-
-    // Generate Best HTML
-    const bestHTML = generate2x3HTML(containerId + '-best-card', best, best.finalScore, best.items);
-
-    // Generate Top 10 List HTML
-    // Generate Top 10 List HTML
-    const listHTML = processed.map((p, idx) => {
-        let itemsHTML = '';
-        if (p.items && (p.items.s3 > 0 || p.items.s2 > 0 || p.items.noble > 0)) {
-            itemsHTML = `
-            <div style="margin-top:5px; padding-top:5px; border-top:1px dashed #444; font-size:0.8rem; text-align:center;">
-                <div style="color:#ccc;">推奨共通秘伝数・加算値</div>
-                <div style="color:var(--accent-color); font-weight:bold;">
-                    共通秘伝Ⅲ：${p.items.s3}個, 共通秘伝Ⅱ：${p.items.s2}個, ノーブル秘伝：${p.items.noble}
-                </div>
-            </div>`;
-        }
-
-        return `
-        <div class="result-card-2x3" style="margin-bottom:10px; border:1px solid #444; padding:10px;">
-             <div class="result-header" style="border-bottom:none; padding-bottom:5px; margin-bottom:5px;">
-                <span style="font-size:1.0rem; font-weight:bold; color:var(--accent-color); margin-right:10px;">TOP ${idx + 1}</span>
-                ${getSymbol(p.finalScore)} ${p.finalScore.toFixed(1)}
-             </div>
-             
-             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; font-size:0.8rem; margin-bottom:10px;">
-                 <div style="background:#222; padding:5px; border-radius:4px;">
-                    <div style="color:#888; font-size:0.7rem;">父親側</div>
-                    <div>父: ${MONSTER_NAMES[p.f]}</div>
-                    <div style="font-size:0.7rem; color:#aaa;">(祖: ${MONSTER_NAMES[p.ff]}, ${MONSTER_NAMES[p.fm]})</div>
-                 </div>
-                 <div style="background:#222; padding:5px; border-radius:4px;">
-                    <div style="color:#888; font-size:0.7rem;">母親側</div>
-                    <div>母: ${MONSTER_NAMES[p.m]}</div>
-                    <div style="font-size:0.7rem; color:#aaa;">(祖: ${MONSTER_NAMES[p.mf]}, ${MONSTER_NAMES[p.mm]})</div>
-                 </div>
-             </div>
-             
-             ${itemsHTML}
-             
-             <div style="text-align:center; margin-top:10px;">
-                  <button class="mini-action-btn" onclick='applyToTyrant(${JSON.stringify(p)}, ${JSON.stringify(p.items)})'>
-                    タイラントツールへ適用
-                  </button>
-             </div>
+        return `<div style="position:relative;">
+            <div style="position:absolute; top:5px; left:5px; font-weight:bold; color:#888; z-index:10;">#${idx + 1}</div>
+            ${cardHTML}
         </div>`;
     }).join('');
 
@@ -1513,6 +1414,147 @@ function renderTabbedResults(containerId, topCombos, targetScore) {
         <div id="${containerId}-best">${bestHTML}</div>
         <div id="${containerId}-top10" style="display:none;">${listHTML}</div>
     `;
+}
+
+// --- General Search Rendering ---
+function renderGeneralTabbedResults(containerId, topCombos, targetVal) {
+    const container = document.getElementById(containerId);
+
+    // Apply button for General Search (No items)
+    // p is the result object
+    const getApplyBtn = (p) => {
+        // Construct dummy items
+        const dummyItems = { s3: 0, s2: 0, noble: 0 };
+        return `<button class="mini-action-btn" onclick='applyToTyrant(${JSON.stringify(p)}, ${JSON.stringify(dummyItems)})'>
+                 タイラントツールへ適用
+                </button>`;
+    };
+
+    // Helper to generate a card HTML (Icon Style)
+    const generateCard = (p, isBest) => {
+        // Determine layout based on result (Grandparents vs Matching)
+        // General Search result structure: { f, m, gps: [id, id, id, id], val }
+
+        // Normalize
+        let fId = p.f;
+        let mId = p.m;
+        let gps = p.gps || [];
+        let ffId = gps[0]; let fmId = gps[1];
+        let mfId = gps[2]; let mmId = gps[3];
+
+        let targetText = "";
+        const score = p.val !== undefined ? p.val : (p.score !== undefined ? p.score : 0);
+
+        if (searchTargetMode === 'all') {
+            targetText = isBest ? `条件達成 ${score}体 (目標 ${targetVal}〜)` : `条件達成 ${score}体`;
+        } else {
+            targetText = isBest ? `推奨系統 (最低保証 ${score.toFixed(1)})` : `最低保証 ${score.toFixed(1)}`;
+        }
+
+        // Use reuse generate2x3HTML style manually since generate2x3HTML expects flat combo object
+        // We will construct the HTML directly to ensure it matches the user's desire for icons
+
+        return `
+        <div class="result-card-2x3" style="margin-bottom:10px; border:1px solid #444; padding:10px;">
+             <div class="result-header" style="border-bottom:none; padding-bottom:5px; margin-bottom:5px;">
+                ${targetText}
+             </div>
+             
+             <div class="result-parents-grid">
+                <div class="parent-label">父親側</div>
+                <div class="mini-card"><img src="images/${MONSTER_NAMES[fId]}.png" onerror="this.src=''"><div>父<br>${MONSTER_NAMES[fId]}</div></div>
+                <div class="mini-card"><img src="images/${MONSTER_NAMES[ffId]}.png" onerror="this.src=''"><div>祖父<br>${MONSTER_NAMES[ffId]}</div></div>
+                <div class="mini-card"><img src="images/${MONSTER_NAMES[fmId]}.png" onerror="this.src=''"><div>祖母<br>${MONSTER_NAMES[fmId]}</div></div>
+            </div>
+            
+            <div class="result-parents-grid">
+                <div class="parent-label">母親側</div>
+                <div class="mini-card"><img src="images/${MONSTER_NAMES[mId]}.png" onerror="this.src=''"><div>母<br>${MONSTER_NAMES[mId]}</div></div>
+                <div class="mini-card"><img src="images/${MONSTER_NAMES[mfId]}.png" onerror="this.src=''"><div>祖父<br>${MONSTER_NAMES[mfId]}</div></div>
+                <div class="mini-card"><img src="images/${MONSTER_NAMES[mmId]}.png" onerror="this.src=''"><div>祖母<br>${MONSTER_NAMES[mmId]}</div></div>
+            </div>
+             
+             <div style="text-align:center;">
+                  ${getApplyBtn(p)}
+             </div>
+        </div>`;
+    };
+
+    const best = topCombos[0];
+    const bestHTML = generateCard(best, true);
+
+    const listHTML = topCombos.map((p, i) => {
+        return `<div style="position:relative;">
+            <div style="position:absolute; top:5px; left:5px; font-weight:bold; color:#888; z-index:10;">#${i + 1}</div>
+            ${generateCard(p, false)}
+        </div>`;
+    }).join('');
+
+    // Add "Best" Tab content wrapper
+    // Reuse capture container style for the Best tab so it can be saved as image
+    const bestTabContent = `
+        <div id="${containerId}-capture" style="padding:10px; background:#121212;">
+            ${bestHTML}
+            <div style="margin-top:20px; font-size:0.9rem; color:#aaa; text-align:center;">
+                全モンスター相性一覧 (Best)
+            </div>
+             <div class="result-grid" id="${containerId}-best-grid">
+                <!-- Injected Logic for Grid -->
+             </div>
+        </div>
+        <div style="text-align:center; margin-top:15px;">
+             <button class="save-img-btn" onclick="saveAsImage('${containerId}-capture', 'general_search_best')">📷 画像を保存</button>
+        </div>
+    `;
+
+    // Fix for Tab Layout Bug: Clear any existing grid classes on container
+    container.className = '';
+
+    container.innerHTML = `
+        <div id="${containerId}-tabs" class="sub-tabs">
+            <div class="sub-tab active" onclick="showResultTab('${containerId}', 'best')">最適となる組合せ</div>
+            <div class="sub-tab" onclick="showResultTab('${containerId}', 'top10')">上位10件の組合せ</div>
+        </div>
+        <div id="${containerId}-best">${bestTabContent}</div>
+        <div id="${containerId}-top10" style="display:none;">${listHTML}</div>
+    `;
+
+    // Populate Best Grid (Async to avoid blocking?)
+    setTimeout(() => {
+        const gridContainer = document.getElementById(`${containerId}-best-grid`);
+        if (gridContainer) {
+            // Re-calculate list for Best
+            // Logic differs for Matching vs Grandparents? 
+            // We can unify calculateScore usage.
+            // p = best
+            const f = best.f; const m = best.m;
+            const gps = best.gps || [];
+
+            const list = [];
+            for (let c = 0; c < MONSTER_NAMES.length; c++) {
+                // calculateScore(child, f, ff, fm, m, mf, mm, ...)
+                let s = calculateScore(c, f, gps[0], gps[1], m, gps[2], gps[3], 0, 0, 0);
+                list.push({ name: MONSTER_NAMES[c], score: s, id: c });
+            }
+            // Sort
+            list.sort((a, b) => b.score - a.score);
+
+            gridContainer.innerHTML = list.map(item => {
+                let highlightClass = '';
+                if (searchTargetMode === 'designated' && targetBloodlines.has(item.id)) highlightClass = 'designated-highlight';
+                else if (searchTargetMode === 'all' && item.score >= targetVal) highlightClass = 'designated-highlight';
+
+                return `
+                    <div class="result-card ${highlightClass}">
+                        <img src="images/${item.name}.png" onerror="this.src=''">
+                        <div>${item.name}</div>
+                        <div class="result-score">${item.score.toFixed(1)}</div>
+                        <div class="result-symbol">${getSymbol(item.score)}</div>
+                    </div>
+                 `;
+            }).join('');
+        }
+    }, 10);
 }
 
 // --- Data / Patching System ---
@@ -1551,7 +1593,12 @@ function initPatchSystem() {
     document.getElementById('overlay-toggle').checked = isOverlayVisible;
     updateOverlayUI();
     renderMatrix();
+
+    // Init state
+    currentDataTab = 'matrix';
 }
+
+let currentDataTab = 'matrix'; // 'matrix' or 'noble'
 
 function applyPatchToMatrix() {
     // Reset to Original
@@ -1727,15 +1774,24 @@ function resetEditValue() {
 }
 
 function resetPatch() {
-    if (!confirm("現在のパッチを全てリセットし、元の数値に戻しますか？")) return;
-    patchData = {};
-    localStorage.removeItem('mf_sim_patch_data');
-    applyPatchToMatrix();
+    if (currentDataTab === 'noble') {
+        if (!confirm("ノーブル秘伝のデータをリセットし、初期値に戻しますか？")) return;
+        resetNobleData();
+    } else {
+        if (!confirm("現在のパッチを全てリセットし、元の数値に戻しますか？")) return;
+        patchData = {};
+        localStorage.removeItem('mf_sim_patch_data');
+        applyPatchToMatrix();
+    }
 }
 
 // --- Export / Import ---
 
 function exportPatch() {
+    if (currentDataTab === 'noble') {
+        exportNobleData();
+        return;
+    }
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(patchData));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
@@ -1760,10 +1816,24 @@ function importPatch(inputElement) {
         try {
             const imported = JSON.parse(e.target.result);
             if (typeof imported === 'object') {
-                patchData = imported;
-                localStorage.setItem('mf_sim_patch_data', JSON.stringify(patchData));
-                applyPatchToMatrix();
-                alert("パッチを読み込みました");
+                if (currentDataTab === 'noble') {
+                    // Import Noble
+                    currentNobleData = imported;
+                    localStorage.setItem('mf_sim_noble_data', JSON.stringify(currentNobleData));
+                    renderNobleTable();
+
+                    // Also update main slider if in star mode
+                    const s = document.getElementById('noble');
+                    if (nobleMode === 'star') onNobleInput(s.value);
+
+                    alert("ノーブル秘伝データを読み込みました");
+                } else {
+                    // Import Patch
+                    patchData = imported;
+                    localStorage.setItem('mf_sim_patch_data', JSON.stringify(patchData));
+                    applyPatchToMatrix();
+                    alert("パッチを読み込みました");
+                }
             }
         } catch (err) {
             console.error(err);
@@ -1790,7 +1860,226 @@ function adjustSlider(id, delta) {
     if (newVal > max) newVal = max;
 
     input.value = newVal;
-    
+
     // Trigger input event
     input.dispatchEvent(new Event('input'));
+}
+
+// --- Noble Data & Logic ---
+let nobleMode = 'val'; // 'val' or 'star'
+let currentNobleData = {};
+
+function initNobleData() {
+    // Clone Default
+    if (typeof structuredClone === 'function') {
+        currentNobleData = structuredClone(DEFAULT_NOBLE_DATA);
+    } else {
+        currentNobleData = JSON.parse(JSON.stringify(DEFAULT_NOBLE_DATA));
+    }
+
+    // Load Override
+    const saved = localStorage.getItem('mf_sim_noble_data');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            // Merge into current (to keep keys if any new ones added, though keys are fixed 1-36)
+            for (let k in parsed) {
+                currentNobleData[k] = parsed[k];
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    // UI Init (Ensure correct mode)
+    // Default to 'star' as requested
+    toggleNobleMode('star');
+}
+
+function toggleNobleMode(mode) {
+    const prevMode = nobleMode;
+    nobleMode = mode;
+
+    const slider = document.getElementById('noble');
+    const prevVal = Number(slider.value);
+
+    document.getElementById('nb-mode-star').classList.toggle('active', mode === 'star');
+    document.getElementById('nb-mode-val').classList.toggle('active', mode === 'val');
+
+    if (mode === 'star') {
+        slider.max = 36;
+        slider.step = 1;
+
+        // Switch Logic: 123 -> Star
+        // Find closest start
+        let closestStar = 0;
+        let minDiff = 9999;
+
+        // Loop 1-36
+        for (let i = 1; i <= 36; i++) {
+            const starVal = currentNobleData[i] || 0;
+            const diff = Math.abs(starVal - prevVal);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestStar = i;
+            }
+        }
+
+        // If prevVal is 0, keep 0
+        if (prevVal === 0) closestStar = 0;
+
+        slider.value = closestStar;
+
+        // Markers Update
+        document.getElementById('noble-markers').innerHTML = `
+            <span class="marker-label" style="left: 0%">0</span>
+            <span class="marker-label" style="left: 50%">18</span>
+            <span class="marker-label" style="left: 100%">36</span>
+        `;
+    } else {
+        // Switching TO '123' (val) mode FROM 'star' mode
+        let targetVal = prevVal; // default if not star
+
+        if (prevMode === 'star') {
+            if (prevVal === 0) targetVal = 0;
+            else targetVal = currentNobleData[prevVal] || 0;
+        }
+
+        slider.max = 300;
+        slider.step = 0.5;
+        slider.value = targetVal;
+
+        document.getElementById('noble-markers').innerHTML = `
+            <span class="marker-label" style="left: 0%">0</span>
+            <span class="marker-label" style="left: 50%">150</span>
+            <span class="marker-label" style="left: 100%">300</span>
+        `;
+    }
+
+    onNobleInput(slider.value);
+}
+
+function onNobleInput(val) {
+    val = Number(val);
+    const labelMain = document.getElementById('noble-label-text');
+    const disp = document.getElementById('noble-val');
+
+    if (nobleMode === 'star') {
+        labelMain.innerText = "ノーブル星数";
+        if (val === 0) {
+            disp.innerText = "★0 (0)";
+        } else {
+            const addedVal = currentNobleData[val] || 0;
+            disp.innerText = `★${val} (${addedVal})`;
+        }
+    } else {
+        labelMain.innerText = "ノーブル加算値";
+        disp.innerText = val;
+    }
+}
+
+// Data Tab Switching
+// Data Tab Switching
+function switchDataTab(tab) {
+    currentDataTab = tab;
+    document.getElementById('dt-tab-matrix').classList.toggle('active', tab === 'matrix');
+    document.getElementById('dt-tab-noble').classList.toggle('active', tab === 'noble');
+
+    document.getElementById('data-view-matrix').style.display = (tab === 'matrix' ? 'block' : 'none');
+    document.getElementById('data-view-noble').style.display = (tab === 'noble' ? 'block' : 'none');
+
+    // Toggle Overlay Settings visibility (Separate container)
+    // IMPORTANT: relies on #patch-config-container being present in index.html
+
+    // We want to hide the CONFIG area (Label + Checkbox), but keep the BUTTONS area visible
+    const patchConfig = document.getElementById('patch-config-container');
+    const matrixButtons = document.getElementById('matrix-ops-container');
+    const nobleButtons = document.getElementById('noble-ops-container');
+
+    if (patchConfig) patchConfig.style.display = (tab === 'noble') ? 'none' : 'block';
+    if (matrixButtons) matrixButtons.style.display = (tab === 'noble') ? 'none' : 'flex';
+    if (nobleButtons) nobleButtons.style.display = (tab === 'noble') ? 'flex' : 'none';
+
+    if (tab === 'noble') {
+        renderNobleTable();
+    }
+}
+
+function renderNobleTable() {
+    const tableDiv = document.getElementById('data-view-noble');
+    // Generate Div Grid 6 columns
+    // We replace the innerHTML directly, no table element needed if we just use grid
+
+    let html = `
+        <div style="
+            display: grid; 
+            grid-template-columns: repeat(6, 1fr); 
+            gap: 5px; 
+            margin-bottom: 20px;
+        ">
+    `;
+
+    for (let i = 1; i <= 36; i++) {
+        const val = currentNobleData[i] || 0;
+        html += `
+            <div style="
+                background: #2a2a2a; 
+                padding: 5px; 
+                border-radius: 4px; 
+                text-align: center;
+                border: 1px solid #444;
+            ">
+                <div style="font-size:0.7rem; color:var(--accent-color); margin-bottom:2px;">★${i}</div>
+                <input type="number" step="0.5" value="${val}" 
+                    style="
+                        width:100%; 
+                        text-align:center; 
+                        background:#111; 
+                        color:#fff; 
+                        border:1px solid #555; 
+                        padding:2px;
+                        font-size:0.8rem;
+                    "
+                    onchange="updateNobleData(${i}, this.value)">
+            </div>
+        `;
+    }
+    html += `</div>`;
+
+    // Add specific Noble Buttons here if not in main layout? 
+    // User asked for "Reset/Export/Import" to disappear/appear based on tab.
+    // I will handle that via 'noble-ops-container' in HTML, but can inject buttons here if easier.
+    // Plan: Use HTML containers toggle.
+
+    tableDiv.innerHTML = html;
+}
+
+function updateNobleData(star, val) {
+    currentNobleData[star] = Number(val);
+    localStorage.setItem('mf_sim_noble_data', JSON.stringify(currentNobleData));
+
+    // Update live view if needed (if currently in star mode and selecting this star)
+    const slider = document.getElementById('noble');
+    if (nobleMode === 'star' && Number(slider.value) === star) {
+        onNobleInput(slider.value);
+    }
+}
+
+function resetNobleData() {
+    if (typeof structuredClone === 'function') {
+        currentNobleData = structuredClone(DEFAULT_NOBLE_DATA);
+    } else {
+        currentNobleData = JSON.parse(JSON.stringify(DEFAULT_NOBLE_DATA));
+    }
+    localStorage.removeItem('mf_sim_noble_data');
+    renderNobleTable();
+    alert("ノーブル秘伝データを初期値に戻しました");
+}
+
+function exportNobleData() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentNobleData));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "mf_noble_data.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
 }

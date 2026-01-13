@@ -14,6 +14,11 @@
 
     <title>LMF ギフトンツール</title>
     <link rel="stylesheet" href="css/style.css?v=2">
+    <style>
+        html {
+            touch-action: manipulation;
+        }
+    </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 
@@ -89,7 +94,7 @@
                 <div class="slider-container">
                     <label>共通秘伝III (<span id="v3-val">0</span>個)</label>
                     <div class="slider-wrapper">
-                        <button class="adjust-btn" onclick="adjustSlider('secret3', -1)">-1</button>
+                        <button class="adjust-btn" onclick="adjustSlider('secret3', -1)">-</button>
                         <div class="slider-track-container">
                             <input type="range" id="secret3" min="0" max="20" value="0" list="list-secret3"
                                 oninput="document.getElementById('v3-val').innerText = this.value">
@@ -99,13 +104,13 @@
                                 <span class="marker-label" style="left: 100%">20</span>
                             </div>
                         </div>
-                        <button class="adjust-btn" onclick="adjustSlider('secret3', 1)">+1</button>
+                        <button class="adjust-btn" onclick="adjustSlider('secret3', 1)">+</button>
                     </div>
                 </div>
                 <div class="slider-container">
                     <label>共通秘伝II (<span id="v2-val">0</span>個)</label>
                     <div class="slider-wrapper">
-                        <button class="adjust-btn" onclick="adjustSlider('secret2', -1)">-1</button>
+                        <button class="adjust-btn" onclick="adjustSlider('secret2', -1)">-</button>
                         <div class="slider-track-container">
                             <input type="range" id="secret2" min="0" max="20" value="0" list="list-secret2"
                                 oninput="document.getElementById('v2-val').innerText = this.value">
@@ -115,23 +120,31 @@
                                 <span class="marker-label" style="left: 100%">20</span>
                             </div>
                         </div>
-                        <button class="adjust-btn" onclick="adjustSlider('secret2', 1)">+1</button>
+                        <button class="adjust-btn" onclick="adjustSlider('secret2', 1)">+</button>
                     </div>
                 </div>
                 <div class="slider-container">
-                    <label>ノーブル加算値 (<span id="noble-val">0</span>)</label>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                        <label style="margin:0;">
+                            <span id="noble-label-text">ノーブル加算値</span>: <span id="noble-val">0</span>
+                        </label>
+                        <div class="segment-control">
+                            <div id="nb-mode-star" class="segment-item" onclick="toggleNobleMode('star')">★</div>
+                            <div id="nb-mode-val" class="segment-item active" onclick="toggleNobleMode('val')">123</div>
+                        </div>
+                    </div>
                     <div class="slider-wrapper">
-                        <button class="adjust-btn" onclick="adjustSlider('noble', -1)">-1</button>
+                        <button class="adjust-btn" onclick="adjustSlider('noble', -1)">-</button>
                         <div class="slider-track-container">
-                            <input type="range" id="noble" min="0" max="300" value="0" list="list-noble"
-                                oninput="document.getElementById('noble-val').innerText = this.value">
-                            <div class="slider-markers">
+                            <input type="range" id="noble" min="0" max="300" value="0"
+                                oninput="onNobleInput(this.value)">
+                            <div class="slider-markers" id="noble-markers">
                                 <span class="marker-label" style="left: 0%">0</span>
                                 <span class="marker-label" style="left: 50%">150</span>
                                 <span class="marker-label" style="left: 100%">300</span>
                             </div>
                         </div>
-                        <button class="adjust-btn" onclick="adjustSlider('noble', 1)">+1</button>
+                        <button class="adjust-btn" onclick="adjustSlider('noble', 1)">+</button>
                     </div>
                 </div>
             </div>
@@ -427,32 +440,61 @@
         <section id="tab-data">
             <div class="feature-title">データ管理</div>
 
-            <div class="input-group">
-                <label>パッチ設定</label>
-                <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <label style="display:flex; align-items:center; cursor:pointer;">
-                        <input type="checkbox" id="overlay-toggle" onchange="toggleOverlaySetting()">
-                        <span style="margin-left:5px;">パッチ適用ON/OFFスイッチを表示する</span>
-                    </label>
+            <div class="input-group" id="patch-settings-group">
+                <div id="patch-config-container">
+                    <label>パッチ設定</label>
+                    <div id="patch-toggle-area" style="display:flex; gap:10px; margin-bottom:10px;">
+                        <label style="display:flex; align-items:center; cursor:pointer;">
+                            <input type="checkbox" id="overlay-toggle" onchange="toggleOverlaySetting()">
+                            <span style="margin-left:5px;">パッチ適用ON/OFFスイッチを表示する</span>
+                        </label>
+                    </div>
                 </div>
 
-                <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <button class="action-btn" style="flex:1; margin-top:0;" onclick="exportPatch()">エクスポート</button>
+                <!-- Matrix Operations -->
+                <div id="matrix-ops-container" style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="action-btn" style="flex:1; margin-top:0;" onclick="exportPatch()">エクスポート
+                        (パッチ)</button>
                     <button class="action-btn" style="flex:1; margin-top:0; position:relative;">
-                        インポート
+                        インポート (パッチ)
                         <input type="file" id="patch-file-input" accept=".json"
                             style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;"
                             onchange="importPatch(this)">
                     </button>
+                    <button class="action-btn" style="background:#555; margin-top:10px;" onclick="resetPatch()">元の数値に戻す
+                        (パッチリセット)</button>
                 </div>
-                <button class="action-btn" style="background:#555; margin-top:10px;" onclick="resetPatch()">元の数値に戻す
-                    (リセット)</button>
+
+                <!-- Noble Operations (Hidden by default) -->
+                <div id="noble-ops-container" style="display:none; gap:10px; flex-wrap:wrap;">
+                    <button class="action-btn" style="flex:1; margin-top:0;" onclick="exportNobleData()">エクスポート
+                        (ノーブル)</button>
+                    <button class="action-btn" style="flex:1; margin-top:0; position:relative;">
+                        インポート (ノーブル)
+                        <input type="file" id="noble-file-input" accept=".json"
+                            style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer;"
+                            onchange="importPatch(this)">
+                    </button>
+                    <button class="action-btn" style="background:#555; margin-top:10px;"
+                        onclick="resetNobleData()">元の数値に戻す
+                        (ノーブルリセット)</button>
+                </div>
             </div>
 
-            <div class="matrix-container">
+            <div class="sub-tabs" style="margin-top:20px; margin-bottom:10px;">
+                <div id="dt-tab-matrix" class="sub-tab active" onclick="switchDataTab('matrix')">基礎相性値</div>
+                <div id="dt-tab-noble" class="sub-tab" onclick="switchDataTab('noble')">ノーブル秘伝</div>
+            </div>
+
+            <div id="data-view-matrix" class="matrix-container">
                 <table class="matrix-table" id="matrix-table">
                     <!-- JS Injected -->
                 </table>
+            </div>
+
+            <div id="data-view-noble" class="matrix-container"
+                style="display:none; text-align:center; background:none; border:none; max-height:none; overflow:visible;">
+                <!-- JS Injected Grid -->
             </div>
         </section>
 

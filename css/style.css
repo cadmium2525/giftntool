@@ -794,3 +794,31 @@ body {
     color: #444;
     margin-bottom: -2px;
 }
+
+/* Segment Control */
+.segment-control {
+    display: flex;
+    background: #333;
+    border-radius: 4px;
+    padding: 2px;
+    margin-left: 10px;
+}
+
+.segment-item {
+    padding: 2px 10px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: #aaa;
+    border-radius: 3px;
+    user-select: none;
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.segment-item.active {
+    background: var(--accent-color);
+    color: #000;
+    font-weight: bold;
+}
