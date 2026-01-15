@@ -1252,7 +1252,12 @@ function applyToTyrant(combo, items) {
     }
     selectedMonsters.gf_m = combo.m;
 
-    // 2. Set Items if present
+    // 2. Fix Noble Mode if needed
+    if (nobleMode === 'star') {
+        toggleNobleMode('val'); // Force switch to 123 mode
+    }
+
+    // 3. Set Items if present
     if (items) {
         document.getElementById('secret3').value = items.s3 || 0;
         document.getElementById('secret2').value = items.s2 || 0;
@@ -1431,7 +1436,7 @@ function renderGeneralTabbedResults(containerId, topCombos, targetVal) {
     };
 
     // Helper to generate a card HTML (Icon Style)
-    const generateCard = (p, isBest) => {
+    const generateCard = (p, isBest, suppressButton = false) => {
         // Determine layout based on result (Grandparents vs Matching)
         // General Search result structure: { f, m, gps: [id, id, id, id], val }
 
@@ -1454,6 +1459,14 @@ function renderGeneralTabbedResults(containerId, topCombos, targetVal) {
         // Use reuse generate2x3HTML style manually since generate2x3HTML expects flat combo object
         // We will construct the HTML directly to ensure it matches the user's desire for icons
 
+        let btnHTML = '';
+        if (!suppressButton) {
+            btnHTML = `
+             <div style="text-align:center;">
+                  ${getApplyBtn(p)}
+             </div>`;
+        }
+
         return `
         <div class="result-card-2x3" style="margin-bottom:10px; border:1px solid #444; padding:10px;">
              <div class="result-header" style="border-bottom:none; padding-bottom:5px; margin-bottom:5px;">
@@ -1474,19 +1487,17 @@ function renderGeneralTabbedResults(containerId, topCombos, targetVal) {
                 <div class="mini-card"><img src="images/${MONSTER_NAMES[mmId]}.png" onerror="this.src=''"><div>祖母<br>${MONSTER_NAMES[mmId]}</div></div>
             </div>
              
-             <div style="text-align:center;">
-                  ${getApplyBtn(p)}
-             </div>
+             ${btnHTML}
         </div>`;
     };
 
     const best = topCombos[0];
-    const bestHTML = generateCard(best, true);
+    const bestHTML = generateCard(best, true, true); // true = suppress internal button
 
     const listHTML = topCombos.map((p, i) => {
         return `<div style="position:relative;">
             <div style="position:absolute; top:5px; left:5px; font-weight:bold; color:#888; z-index:10;">#${i + 1}</div>
-            ${generateCard(p, false)}
+            ${generateCard(p, false, false)}
         </div>`;
     }).join('');
 
@@ -1496,14 +1507,15 @@ function renderGeneralTabbedResults(containerId, topCombos, targetVal) {
         <div id="${containerId}-capture" style="padding:10px; background:#121212;">
             ${bestHTML}
             <div style="margin-top:20px; font-size:0.9rem; color:#aaa; text-align:center;">
-                全モンスター相性一覧 (Best)
+                全モンスター相性一覧
             </div>
              <div class="result-grid" id="${containerId}-best-grid">
                 <!-- Injected Logic for Grid -->
              </div>
         </div>
-        <div style="text-align:center; margin-top:15px;">
-             <button class="save-img-btn" onclick="saveAsImage('${containerId}-capture', 'general_search_best')">📷 画像を保存</button>
+        <div style="text-align:right; margin-top:10px; display:flex; justify-content:flex-end; gap:10px;">
+             ${getApplyBtn(best)}
+             <button class="save-img-btn" style="margin-top:0;" onclick="saveAsImage('${containerId}-capture', 'general_search_best')">📷 画像を保存</button>
         </div>
     `;
 
