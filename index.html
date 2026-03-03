@@ -544,6 +544,12 @@
     <div id="exclusion-modal" class="modal">
         <div class="modal-content">
             <h3>除外モンスター設定</h3>
+            <div style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
+                <button class="action-btn" style="width:auto; padding:5px 15px; font-size:0.8rem; background:#444;"
+                    onclick="selectNonNoble()">非ノーブル</button>
+                <button class="action-btn" style="width:auto; padding:5px 15px; font-size:0.8rem; background:#444;"
+                    onclick="clearExclusions()">一括解除</button>
+            </div>
             <p style="font-size:0.8rem; color:#aaa; margin-bottom:10px;">タップして除外/解除</p>
             <div id="exclusion-grid" class="modal-grid">
                 <!-- Injected via JS -->

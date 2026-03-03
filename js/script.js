@@ -917,6 +917,25 @@ function closeExclusionModal() {
     updateExclusionCounts();
 }
 
+function selectNonNoble() {
+    excludedMonsters.clear();
+    MONSTER_NAMES.forEach((name, idx) => {
+        if (!NOBLE_MONSTER_NAMES.includes(name)) {
+            excludedMonsters.add(idx);
+        }
+    });
+    renderExclusionModal();
+    updateExclusionCounts();
+    saveToLocalStorage();
+}
+
+function clearExclusions() {
+    excludedMonsters.clear();
+    renderExclusionModal();
+    updateExclusionCounts();
+    saveToLocalStorage();
+}
+
 function toggleExclusion(idx) {
     if (excludedMonsters.has(idx)) {
         excludedMonsters.delete(idx);
