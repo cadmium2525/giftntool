@@ -822,3 +822,98 @@ body {
     color: #000;
     font-weight: bold;
 }
+
+/* --- オーラ一括ボタン --- */
+.aura-btn {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-weight: bold;
+    font-size: 0.85rem;
+    cursor: pointer;
+    min-width: 36px;
+    transition: opacity 0.15s, transform 0.1s;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+
+.aura-btn:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+
+.aura-btn:active {
+    opacity: 0.7;
+    transform: scale(0.96);
+}
+
+/* --- 血統データテーブル --- */
+.bloodline-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    background: var(--card-bg);
+}
+
+.bloodline-table thead tr {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #2a2a2a;
+}
+
+.bloodline-table th,
+.bloodline-table td {
+    border: 1px solid #333;
+    padding: 5px 4px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.bloodline-name-col {
+    text-align: left !important;
+    min-width: 90px;
+    color: var(--text-secondary);
+    font-weight: bold;
+    background: #2a2a2a;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+}
+
+.bloodline-aura-col {
+    min-width: 38px;
+    font-weight: bold;
+}
+
+.bloodline-name-cell {
+    text-align: left !important;
+    padding: 4px 6px;
+    color: var(--text-primary);
+    font-size: 0.75rem;
+    background: #1e1e1e;
+    position: sticky;
+    left: 0;
+    z-index: 4;
+}
+
+.bloodline-check-cell {
+    padding: 4px;
+}
+
+.bloodline-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent-color);
+}
+
+.noble-check {
+    accent-color: var(--accent-color);
+}
+
+/* 血統テーブルの行ホバー */
+.bloodline-table tbody tr:hover td {
+    background: rgba(187, 134, 252, 0.07);
+}

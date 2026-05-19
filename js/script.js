@@ -6,8 +6,10 @@ let selectedMonsters = {
     gf_m: null, gf_mf: null, gf_mm: null,
     // Feature 2
     opt_child: null,
-    // Feature 3
+    // Feature 3: 補完探索
     rev_child: null, rev_f: null, rev_ff: null, rev_fm: null, rev_m: null, rev_mf: null, rev_mm: null,
+    // Feature: 詳細探索
+    det_child: null, det_f: null, det_ff: null, det_fm: null, det_m: null, det_mf: null, det_mm: null,
     // Feature 4
     gen_ff: null, gen_fm: null, gen_mf: null, gen_mm: null,
     // Feature 4: Matching Mode
@@ -18,25 +20,27 @@ let selectedMonsters = {
 let searchTargetMode = 'all'; // 'all' or 'designated'
 let targetBloodlines = new Set(); // Stores IDs of selected monsters
 
-// Set of excluded IDs
+// Set of excluded IDs (共通)
 let excludedMonsters = new Set();
+
+// 詳細探索用の道別除外セット
+let excludedFatherMonsters = new Set(); // 父親側除外
+let excludedMotherMonsters = new Set(); // 母親側除外
+let detailExclusionTarget = null; // '父親側' or '母親側' (モーダルのターゲット)
 
 // --- Init ---
 document.addEventListener('DOMContentLoaded', () => {
     loadFromLocalStorage();
     renderMonstersToModal();
     renderExclusionModal();
-    updateAllPlaceholders();
-    updateAllPlaceholders();
-    updateExclusionCounts();
-    renderExclusionModal();
-    updateAllPlaceholders();
+    renderDetailExclusionModal();
     updateAllPlaceholders();
     updateExclusionCounts();
-    syncSliderLabels();
+    updateDetailExclusionCounts();
     syncSliderLabels();
     initPatchSystem(); // Initialize Data/Patch System
     initNobleData();
+    initBloodlineData(); // 血統データ初期化
 });
 
 function syncSliderLabels() {
@@ -774,6 +778,13 @@ function resetInputs(feature) {
         document.getElementById('target-symbol-rev').value = "999";
         document.getElementById('rev-opt-results').innerHTML = '';
     }
+    if (feature === 'detail') {
+        selectedMonsters.det_child = null;
+        selectedMonsters.det_f = null; selectedMonsters.det_ff = null; selectedMonsters.det_fm = null;
+        selectedMonsters.det_m = null; selectedMonsters.det_mf = null; selectedMonsters.det_mm = null;
+        document.getElementById('target-symbol-det').value = "999";
+        document.getElementById('det-opt-results').innerHTML = '';
+    }
     if (feature === 'gen') {
         const mode = document.getElementById('gen_mode').value;
         if (mode === 'matching') {
@@ -918,9 +929,12 @@ function closeExclusionModal() {
 }
 
 function selectNonNoble() {
+    // 血統データタブのノーブル列を参照して除外リストを更新
     excludedMonsters.clear();
     MONSTER_NAMES.forEach((name, idx) => {
-        if (!NOBLE_MONSTER_NAMES.includes(name)) {
+        const data = currentBloodlineData[name];
+        const isNoble = data ? data['ノーブル'] === true : NOBLE_MONSTER_NAMES.includes(name);
+        if (!isNoble) {
             excludedMonsters.add(idx);
         }
     });
@@ -963,11 +977,14 @@ function renderExclusionModal() {
 
 function updateExclusionCounts() {
     const count = excludedMonsters.size;
-    document.getElementById('exclusion-count-opt').innerText = `${count}体 除外中`;
-    document.getElementById('exclusion-count-rev').innerText = `${count}体 除外中`;
-    document.getElementById('exclusion-count-gen').innerText = `${count}体 除外中`;
+    const optEl = document.getElementById('exclusion-count-opt');
+    const revEl = document.getElementById('exclusion-count-rev');
+    const genEl = document.getElementById('exclusion-count-gen');
+    if (optEl) optEl.innerText = `${count}体 除外中`;
+    if (revEl) revEl.innerText = `${count}体 除外中`;
+    if (genEl) genEl.innerText = `${count}体 除外中`;
 
-    // Update small icons
+    // アイコン表示の更新
     const renderIcons = (containerId) => {
         const el = document.getElementById(containerId);
         if (!el) return;
@@ -979,6 +996,26 @@ function updateExclusionCounts() {
     renderIcons('exclusion-icons-opt');
     renderIcons('exclusion-icons-rev');
     renderIcons('exclusion-icons-gen');
+}
+
+// 詳細探索用除外カウンター更新
+function updateDetailExclusionCounts() {
+    const fCount = excludedFatherMonsters.size;
+    const mCount = excludedMotherMonsters.size;
+    const fEl = document.getElementById('exclusion-count-det-f');
+    const mEl = document.getElementById('exclusion-count-det-m');
+    if (fEl) fEl.innerText = `${fCount}体 除外中`;
+    if (mEl) mEl.innerText = `${mCount}体 除外中`;
+
+    const renderIcons = (containerId, targetSet) => {
+        const el = document.getElementById(containerId);
+        if (!el) return;
+        el.innerHTML = Array.from(targetSet).map(id =>
+            `<img src="images/${MONSTER_NAMES[id]}.png" class="excluded-icon" title="${MONSTER_NAMES[id]}">`
+        ).join('');
+    };
+    renderIcons('exclusion-icons-det-f', excludedFatherMonsters);
+    renderIcons('exclusion-icons-det-m', excludedMotherMonsters);
 }
 
 function updateAllPlaceholders() {
@@ -1238,16 +1275,28 @@ function updateTargetCount() {
 function saveToLocalStorage() {
     localStorage.setItem('mf_sim_data', JSON.stringify(selectedMonsters));
     localStorage.setItem('mf_sim_excluded', JSON.stringify(Array.from(excludedMonsters)));
+    localStorage.setItem('mf_sim_excluded_father', JSON.stringify(Array.from(excludedFatherMonsters)));
+    localStorage.setItem('mf_sim_excluded_mother', JSON.stringify(Array.from(excludedMotherMonsters)));
 }
 
 function loadFromLocalStorage() {
     const data = localStorage.getItem('mf_sim_data');
     if (data) {
-        selectedMonsters = JSON.parse(data);
+        const parsed = JSON.parse(data);
+        // 新しいスロットがない場合に対応
+        selectedMonsters = Object.assign(selectedMonsters, parsed);
     }
     const exData = localStorage.getItem('mf_sim_excluded');
     if (exData) {
         excludedMonsters = new Set(JSON.parse(exData));
+    }
+    const exFData = localStorage.getItem('mf_sim_excluded_father');
+    if (exFData) {
+        excludedFatherMonsters = new Set(JSON.parse(exFData));
+    }
+    const exMData = localStorage.getItem('mf_sim_excluded_mother');
+    if (exMData) {
+        excludedMotherMonsters = new Set(JSON.parse(exMData));
     }
 }
 
@@ -2008,31 +2057,7 @@ function onNobleInput(val) {
 }
 
 // Data Tab Switching
-// Data Tab Switching
-function switchDataTab(tab) {
-    currentDataTab = tab;
-    document.getElementById('dt-tab-matrix').classList.toggle('active', tab === 'matrix');
-    document.getElementById('dt-tab-noble').classList.toggle('active', tab === 'noble');
-
-    document.getElementById('data-view-matrix').style.display = (tab === 'matrix' ? 'block' : 'none');
-    document.getElementById('data-view-noble').style.display = (tab === 'noble' ? 'block' : 'none');
-
-    // Toggle Overlay Settings visibility (Separate container)
-    // IMPORTANT: relies on #patch-config-container being present in index.html
-
-    // We want to hide the CONFIG area (Label + Checkbox), but keep the BUTTONS area visible
-    const patchConfig = document.getElementById('patch-config-container');
-    const matrixButtons = document.getElementById('matrix-ops-container');
-    const nobleButtons = document.getElementById('noble-ops-container');
-
-    if (patchConfig) patchConfig.style.display = (tab === 'noble') ? 'none' : 'block';
-    if (matrixButtons) matrixButtons.style.display = (tab === 'noble') ? 'none' : 'flex';
-    if (nobleButtons) nobleButtons.style.display = (tab === 'noble') ? 'flex' : 'none';
-
-    if (tab === 'noble') {
-        renderNobleTable();
-    }
-}
+// switchDataTab は末尾で血統データタブ対応版として定義済み
 
 function renderNobleTable() {
     const tableDiv = document.getElementById('data-view-noble');
@@ -2114,3 +2139,368 @@ function exportNobleData() {
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
 }
+
+// =============================================================
+// --- 詳細探索 (Detail Search) ---
+// =============================================================
+
+// 詳細探索用の除外モーダルを開く
+function openDetailExclusionModal(side) {
+    // side: 'father' or 'mother'
+    detailExclusionTarget = side;
+    const title = document.getElementById('detail-exclusion-title');
+    if (title) {
+        title.innerText = side === 'father'
+            ? '除外モンスター設定 (父親側)'
+            : '除外モンスター設定 (母親側)';
+    }
+    renderDetailExclusionModal();
+    document.getElementById('detail-exclusion-modal').classList.add('open');
+}
+
+function closeDetailExclusionModal() {
+    document.getElementById('detail-exclusion-modal').classList.remove('open');
+    updateDetailExclusionCounts();
+}
+
+// 現在のターゲットセットを返すヘルパー
+function getCurrentDetailSet() {
+    return detailExclusionTarget === 'father' ? excludedFatherMonsters : excludedMotherMonsters;
+}
+
+function renderDetailExclusionModal() {
+    const grid = document.getElementById('detail-exclusion-grid');
+    if (!grid) return;
+    const targetSet = getCurrentDetailSet();
+    grid.innerHTML = MONSTER_NAMES.map((name, idx) => {
+        const isExcluded = targetSet.has(idx);
+        const style = isExcluded ? 'background: #500; border: 1px solid red;' : '';
+        return `
+        <div class="modal-item" style="${style}" onclick="toggleDetailExclusion(${idx})">
+            <div>
+                <img src="images/${name}.png" alt="${name}" style="width:32px; height:32px; display:block; margin:0 auto; opacity:${isExcluded ? 0.5 : 1}"><br>
+                ${name}
+            </div>
+        </div>
+    `;
+    }).join('');
+}
+
+function toggleDetailExclusion(idx) {
+    const targetSet = getCurrentDetailSet();
+    if (targetSet.has(idx)) {
+        targetSet.delete(idx);
+    } else {
+        targetSet.add(idx);
+    }
+    renderDetailExclusionModal();
+    saveToLocalStorage();
+}
+
+function selectNonNobleDetail() {
+    const targetSet = getCurrentDetailSet();
+    targetSet.clear();
+    MONSTER_NAMES.forEach((name, idx) => {
+        const data = currentBloodlineData[name];
+        const isNoble = data ? data['ノーブル'] === true : NOBLE_MONSTER_NAMES.includes(name);
+        if (!isNoble) {
+            targetSet.add(idx);
+        }
+    });
+    renderDetailExclusionModal();
+    saveToLocalStorage();
+}
+
+function clearDetailExclusions() {
+    const targetSet = getCurrentDetailSet();
+    targetSet.clear();
+    renderDetailExclusionModal();
+    saveToLocalStorage();
+}
+
+// オーラで一括追加（共通除外モーダル用）
+// 指定オーラを「持たない」モンスターを除外リストに追加
+function addExclusionByAura(auraLabel) {
+    MONSTER_NAMES.forEach((name, idx) => {
+        const data = currentBloodlineData[name];
+        // オーラを持たない場合（falseまたはデータなし）を除外対象にする
+        if (!data || data[auraLabel] !== true) {
+            excludedMonsters.add(idx);
+        }
+    });
+    renderExclusionModal();
+    updateExclusionCounts();
+    saveToLocalStorage();
+}
+
+// オーラで一括追加（詳細探索除外モーダル用）
+// 指定オーラを「持たない」モンスターを除外リストに追加
+function addDetailExclusionByAura(auraLabel) {
+    const targetSet = getCurrentDetailSet();
+    MONSTER_NAMES.forEach((name, idx) => {
+        const data = currentBloodlineData[name];
+        // オーラを持たない場合（falseまたはデータなし）を除外対象にする
+        if (!data || data[auraLabel] !== true) {
+            targetSet.add(idx);
+        }
+    });
+    renderDetailExclusionModal();
+    saveToLocalStorage();
+}
+
+// 詳細探索メイン関数（補完探索をベースに父親側・母親側で別除外セットを使用）
+function runDetailSearch() {
+    const childId = selectedMonsters.det_child;
+    if (childId === null) {
+        alert('育成モンスター(子)を選択してください');
+        return;
+    }
+
+    const slots = {
+        f: selectedMonsters.det_f,
+        ff: selectedMonsters.det_ff,
+        fm: selectedMonsters.det_fm,
+        m: selectedMonsters.det_m,
+        mf: selectedMonsters.det_mf,
+        mm: selectedMonsters.det_mm
+    };
+
+    // 父親側・母親側それぞれの有効モンスターリスト
+    const validFatherMonsters = [];
+    const validMotherMonsters = [];
+    for (let i = 0; i < MONSTER_NAMES.length; i++) {
+        if (!excludedFatherMonsters.has(i)) validFatherMonsters.push(i);
+        if (!excludedMotherMonsters.has(i)) validMotherMonsters.push(i);
+    }
+
+    const GP_POOL_SIZE = 5;
+
+    // 父親側または母親側のベストユニットを計算
+    function getBestUnit(isMother) {
+        const p = isMother ? slots.m : slots.f;
+        const gp1Fixed = isMother ? slots.mf : slots.ff;
+        const gp2Fixed = isMother ? slots.mm : slots.fm;
+        // 使用するvalidリスト
+        const validList = isMother ? validMotherMonsters : validFatherMonsters;
+
+        let candidates = [];
+        let pList = (p !== null) ? [p] : validList;
+
+        for (let i of pList) {
+            // GP1候補
+            let gp1List = (gp1Fixed !== null) ? [gp1Fixed] : validList;
+            let gp1Candidates = [];
+            for (let g of gp1List) {
+                let val = Math.min(getComb(i, g), getComb(childId, g));
+                gp1Candidates.push({ id: g, score: val });
+            }
+            gp1Candidates.sort((a, b) => b.score - a.score);
+            let topGP1 = gp1Candidates.slice(0, GP_POOL_SIZE);
+
+            // GP2候補
+            let gp2List = (gp2Fixed !== null) ? [gp2Fixed] : validList;
+            let gp2Candidates = [];
+            for (let g of gp2List) {
+                let val = Math.min(getComb(i, g), getComb(childId, g));
+                gp2Candidates.push({ id: g, score: val });
+            }
+            gp2Candidates.sort((a, b) => b.score - a.score);
+            let topGP2 = gp2Candidates.slice(0, GP_POOL_SIZE);
+
+            if (topGP1.length === 0 || topGP2.length === 0) continue;
+
+            let parentTuples = [];
+            let base = getComb(childId, i);
+
+            for (let g1 of topGP1) {
+                for (let g2 of topGP2) {
+                    parentTuples.push({
+                        id: i,
+                        gp1: g1.id,
+                        gp2: g2.id,
+                        score: base + g1.score + g2.score
+                    });
+                }
+            }
+            parentTuples.sort((a, b) => b.score - a.score);
+            candidates.push(...parentTuples.slice(0, GP_POOL_SIZE));
+        }
+        return candidates;
+    }
+
+    let pUnits = getBestUnit(false);
+    let mUnits = getBestUnit(true);
+
+    if (pUnits.length === 0 || mUnits.length === 0) {
+        alert('探索候補が見つかりませんでした');
+        return;
+    }
+
+    let allCandidates = [];
+
+    for (let p of pUnits) {
+        for (let m of mUnits) {
+            let fmScore = getComb(p.id, m.id);
+            let total = p.score + m.score + fmScore + 224;
+
+            allCandidates.push({
+                f: p.id, ff: p.gp1, fm: p.gp2,
+                m: m.id, mf: m.gp1, mm: m.gp2,
+                child: childId,
+                rawScore: total
+            });
+        }
+    }
+
+    if (allCandidates.length === 0) {
+        alert('有効な結果が見つかりませんでした');
+        return;
+    }
+
+    allCandidates.sort((a, b) => b.rawScore - a.rawScore);
+
+    const topCombos = allCandidates.slice(0, 10);
+    const targetSymbolScore = Number(document.getElementById('target-symbol-det').value);
+
+    renderTabbedResults('det-opt-results', topCombos, targetSymbolScore);
+}
+
+// =============================================================
+// --- 血統データ管理 ---
+// =============================================================
+
+let currentBloodlineData = {};
+
+function initBloodlineData() {
+    // デフォルトデータをクローン
+    if (typeof structuredClone === 'function') {
+        currentBloodlineData = structuredClone(DEFAULT_BLOODLINE_DATA);
+    } else {
+        currentBloodlineData = JSON.parse(JSON.stringify(DEFAULT_BLOODLINE_DATA));
+    }
+
+    // 保存済みデータをロード
+    const saved = localStorage.getItem('mf_bloodline_data');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            // マージ（血統追加に対応）
+            for (let name in parsed) {
+                if (currentBloodlineData[name]) {
+                    currentBloodlineData[name] = parsed[name];
+                }
+            }
+        } catch (e) { console.error(e); }
+    }
+}
+
+function saveBloodlineData() {
+    localStorage.setItem('mf_bloodline_data', JSON.stringify(currentBloodlineData));
+}
+
+function renderBloodlineDataTable() {
+    const container = document.getElementById('data-view-bloodline');
+    if (!container) return;
+
+    // オーラ列（ノーブルを除く6色）
+    const auraColors = {
+        '赤': '#c0392b',
+        '青': '#2980b9',
+        '黄': '#f39c12',
+        '緑': '#27ae60',
+        '白': '#bdc3c7',
+        '黒': '#555'
+    };
+    const auraCols = ['赤', '青', '黄', '緑', '白', '黒'];
+
+    let html = `<table class="bloodline-table">
+        <thead>
+            <tr>
+                <th class="bloodline-name-col">血統</th>
+                ${auraCols.map(a => `<th class="bloodline-aura-col" style="color:${auraColors[a] || '#fff'}">${a}</th>`).join('')}
+                <th class="bloodline-aura-col" style="color:var(--accent-color);">ノーブル</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    MONSTER_NAMES.forEach(name => {
+        const d = currentBloodlineData[name] || {};
+        html += `<tr>
+            <td class="bloodline-name-cell">
+                <img src="images/${name}.png" style="width:20px;height:20px;vertical-align:middle;margin-right:4px;" onerror="this.style.display='none'">
+                ${name}
+            </td>`;
+
+        // オーラ列（赤〜黒）
+        auraCols.forEach(a => {
+            const checked = d[a] === true;
+            html += `<td class="bloodline-check-cell">
+                <input type="checkbox" ${checked ? 'checked' : ''}
+                    onchange="toggleBloodlineCheck('${name}', '${a}', this.checked)"
+                    class="bloodline-checkbox">
+            </td>`;
+        });
+
+        // ノーブル列（別扱い）
+        const nobleChecked = d['ノーブル'] === true;
+        html += `<td class="bloodline-check-cell">
+            <input type="checkbox" ${nobleChecked ? 'checked' : ''}
+                onchange="toggleBloodlineCheck('${name}', 'ノーブル', this.checked)"
+                class="bloodline-checkbox noble-check">
+        </td>`;
+
+        html += `</tr>`;
+    });
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+}
+
+function toggleBloodlineCheck(name, aura, checked) {
+    if (!currentBloodlineData[name]) return;
+    currentBloodlineData[name][aura] = checked;
+    saveBloodlineData();
+}
+
+// =============================================================
+// --- switchDataTab の拡張 (血統データタブ対応) ---
+// =============================================================
+
+// 血統データタブ対応版 switchDataTab（旧実装はコメントアウト済み）
+function switchDataTab(tab) {
+    currentDataTab = tab;
+
+    // タブUI更新
+    document.getElementById('dt-tab-matrix').classList.toggle('active', tab === 'matrix');
+    document.getElementById('dt-tab-noble').classList.toggle('active', tab === 'noble');
+    const bloodlineTab = document.getElementById('dt-tab-bloodline');
+    if (bloodlineTab) bloodlineTab.classList.toggle('active', tab === 'bloodline');
+
+    // コンテンツ表示切替
+    document.getElementById('data-view-matrix').style.display = (tab === 'matrix' ? 'block' : 'none');
+    document.getElementById('data-view-noble').style.display = (tab === 'noble' ? 'block' : 'none');
+    const bloodlineView = document.getElementById('data-view-bloodline');
+    if (bloodlineView) bloodlineView.style.display = (tab === 'bloodline' ? 'block' : 'none');
+
+    // ボタンエリアの表示切替
+    const patchConfig = document.getElementById('patch-config-container');
+    const matrixButtons = document.getElementById('matrix-ops-container');
+    const nobleButtons = document.getElementById('noble-ops-container');
+
+    if (tab === 'noble') {
+        if (patchConfig) patchConfig.style.display = 'none';
+        if (matrixButtons) matrixButtons.style.display = 'none';
+        if (nobleButtons) nobleButtons.style.display = 'flex';
+        renderNobleTable();
+    } else if (tab === 'bloodline') {
+        if (patchConfig) patchConfig.style.display = 'none';
+        if (matrixButtons) matrixButtons.style.display = 'none';
+        if (nobleButtons) nobleButtons.style.display = 'none';
+        renderBloodlineDataTable();
+    } else {
+        if (patchConfig) patchConfig.style.display = 'block';
+        if (matrixButtons) matrixButtons.style.display = 'flex';
+        if (nobleButtons) nobleButtons.style.display = 'none';
+    }
+}
+

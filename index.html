@@ -282,6 +282,102 @@
             <div id="rev-opt-results"></div>
         </section>
 
+        <!-- Feature: 詳細探索 -->
+        <section id="tab-detail-opt">
+            <div class="feature-title">詳細探索</div>
+            <div class="input-group">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label>育成モンスター (子)</label>
+                    <button onclick="resetInputs('detail')"
+                        style="font-size:0.75rem; padding:4px 8px; background:#444; border:none; color:#eee; border-radius:4px; cursor:pointer;">リセット</button>
+                </div>
+                <div class="monster-selector-row">
+                    <div class="monster-btn large placeholder" data-slot="det_child"
+                        onclick="openMonsterModal('det_child')">選択</div>
+                </div>
+            </div>
+
+            <!-- 父親側除外 -->
+            <div class="input-group">
+                <label>父親側 除外モンスター</label>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <button class="action-btn"
+                        style="background:#444; font-size:0.9rem; width:auto; padding:8px 15px; margin-top:0;"
+                        onclick="openDetailExclusionModal('father')">設定を開く</button>
+                    <div id="exclusion-count-det-f" style="font-size:0.8rem; color:#aaa;">0体 除外中</div>
+                </div>
+                <div id="exclusion-icons-det-f" class="excluded-list"></div>
+            </div>
+
+            <!-- 母親側除外 -->
+            <div class="input-group">
+                <label>母親側 除外モンスター</label>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <button class="action-btn"
+                        style="background:#444; font-size:0.9rem; width:auto; padding:8px 15px; margin-top:0;"
+                        onclick="openDetailExclusionModal('mother')">設定を開く</button>
+                    <div id="exclusion-count-det-m" style="font-size:0.8rem; color:#aaa;">0体 除外中</div>
+                </div>
+                <div id="exclusion-icons-det-m" class="excluded-list"></div>
+            </div>
+
+            <div class="input-group">
+                <label>目標相性シンボル</label>
+                <select id="target-symbol-det"
+                    style="width:100%; padding:10px; background:#333; color:white; border:1px solid #555;">
+                    <option value="999">指定なし (最大値を探索)</option>
+                    <option value="660">👑 (660~)</option>
+                    <option value="614">☆ (614~)</option>
+                    <option value="490">◎ (490~)</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label style="margin-bottom:10px;">固定枠 (空欄は最適探索)</label>
+
+                <div class="parent-grid-row">
+                    <div class="parent-label">父親側</div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">父親</div>
+                        <div class="monster-btn placeholder" data-slot="det_f" onclick="openMonsterModal('det_f')">選択
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖父</div>
+                        <div class="monster-btn placeholder" data-slot="det_ff" onclick="openMonsterModal('det_ff')">選択
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖母</div>
+                        <div class="monster-btn placeholder" data-slot="det_fm" onclick="openMonsterModal('det_fm')">選択
+                        </div>
+                    </div>
+                </div>
+
+                <div class="parent-grid-row">
+                    <div class="parent-label">母親側</div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">母親</div>
+                        <div class="monster-btn placeholder" data-slot="det_m" onclick="openMonsterModal('det_m')">選択
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖父</div>
+                        <div class="monster-btn placeholder" data-slot="det_mf" onclick="openMonsterModal('det_mf')">選択
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#888; text-align:center; margin-bottom:2px;">祖母</div>
+                        <div class="monster-btn placeholder" data-slot="det_mm" onclick="openMonsterModal('det_mm')">選択
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="action-btn" onclick="runDetailSearch()">詳細探索</button>
+            <div id="det-opt-results"></div>
+        </section>
+
         <!-- Feature 4: General Reverse -->
         <section id="tab-general">
             <div class="feature-title">汎用探索</div>
@@ -484,6 +580,7 @@
             <div class="sub-tabs" style="margin-top:20px; margin-bottom:10px;">
                 <div id="dt-tab-matrix" class="sub-tab active" onclick="switchDataTab('matrix')">基礎相性値</div>
                 <div id="dt-tab-noble" class="sub-tab" onclick="switchDataTab('noble')">ノーブル秘伝</div>
+                <div id="dt-tab-bloodline" class="sub-tab" onclick="switchDataTab('bloodline')">血統データ</div>
             </div>
 
             <div id="data-view-matrix" class="matrix-container">
@@ -496,6 +593,11 @@
                 style="display:none; text-align:center; background:none; border:none; max-height:none; overflow:visible;">
                 <!-- JS Injected Grid -->
             </div>
+
+            <div id="data-view-bloodline"
+                style="display:none; overflow:auto; max-height:70vh;">
+                <!-- JS Injected Bloodline Table -->
+            </div>
         </section>
 
     </main>
@@ -505,13 +607,13 @@
             <span class="nav-icon">🎁</span>
             <span>Gift/Tyrant</span>
         </a>
-        <a class="nav-item" onclick="switchTab('tab-optimize', this)">
-            <span class="nav-icon">✨</span>
-            <span>最適探索</span>
-        </a>
         <a class="nav-item" onclick="switchTab('tab-reverse-opt', this)">
             <span class="nav-icon">🧩</span>
             <span>補完探索</span>
+        </a>
+        <a class="nav-item" onclick="switchTab('tab-detail-opt', this)">
+            <span class="nav-icon">🎯</span>
+            <span>詳細探索</span>
         </a>
         <a class="nav-item" onclick="switchTab('tab-general', this)">
             <span class="nav-icon">🔍</span>
@@ -540,21 +642,57 @@
         </div>
     </div>
 
-    <!-- Exclusion Modal -->
+    <!-- Exclusion Modal (共通) -->
     <div id="exclusion-modal" class="modal">
         <div class="modal-content">
             <h3>除外モンスター設定</h3>
-            <div style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
-                <button class="action-btn" style="width:auto; padding:5px 15px; font-size:0.8rem; background:#444;"
+            <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin-bottom:8px;">
+                <button class="action-btn" style="width:auto; padding:5px 12px; font-size:0.8rem; background:#444;"
                     onclick="selectNonNoble()">非ノーブル</button>
-                <button class="action-btn" style="width:auto; padding:5px 15px; font-size:0.8rem; background:#444;"
+                <button class="action-btn" style="width:auto; padding:5px 12px; font-size:0.8rem; background:#444;"
                     onclick="clearExclusions()">一括解除</button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:5px; margin-bottom:10px;">
+                <span style="font-size:0.75rem; color:#888; width:100%; text-align:center; margin-bottom:4px;">オーラで一括追加：</span>
+                <button class="aura-btn" style="background:#8B0000;" onclick="addExclusionByAura('赤')">赤以外</button>
+                <button class="aura-btn" style="background:#1a3a8B;" onclick="addExclusionByAura('青')">青以外</button>
+                <button class="aura-btn" style="background:#7a6a00;" onclick="addExclusionByAura('黄')">黄以外</button>
+                <button class="aura-btn" style="background:#0a5a0a;" onclick="addExclusionByAura('緑')">緑以外</button>
+                <button class="aura-btn" style="background:#555;" onclick="addExclusionByAura('白')">白以外</button>
+                <button class="aura-btn" style="background:#222;" onclick="addExclusionByAura('黒')">黒以外</button>
             </div>
             <p style="font-size:0.8rem; color:#aaa; margin-bottom:10px;">タップして除外/解除</p>
             <div id="exclusion-grid" class="modal-grid">
                 <!-- Injected via JS -->
             </div>
             <button class="modal-close" onclick="closeExclusionModal()">完了</button>
+        </div>
+    </div>
+
+    <!-- 詳細探索用 除外モーダル -->
+    <div id="detail-exclusion-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="detail-exclusion-title">除外モンスター設定 (父親側)</h3>
+            <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin-bottom:8px;">
+                <button class="action-btn" style="width:auto; padding:5px 12px; font-size:0.8rem; background:#444;"
+                    onclick="selectNonNobleDetail()">非ノーブル</button>
+                <button class="action-btn" style="width:auto; padding:5px 12px; font-size:0.8rem; background:#444;"
+                    onclick="clearDetailExclusions()">一括解除</button>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:5px; margin-bottom:10px;">
+                <span style="font-size:0.75rem; color:#888; width:100%; text-align:center; margin-bottom:4px;">オーラで一括追加：</span>
+                <button class="aura-btn" style="background:#8B0000;" onclick="addDetailExclusionByAura('赤')">赤以外</button>
+                <button class="aura-btn" style="background:#1a3a8B;" onclick="addDetailExclusionByAura('青')">青以外</button>
+                <button class="aura-btn" style="background:#7a6a00;" onclick="addDetailExclusionByAura('黄')">黄以外</button>
+                <button class="aura-btn" style="background:#0a5a0a;" onclick="addDetailExclusionByAura('緑')">緑以外</button>
+                <button class="aura-btn" style="background:#555;" onclick="addDetailExclusionByAura('白')">白以外</button>
+                <button class="aura-btn" style="background:#222;" onclick="addDetailExclusionByAura('黒')">黒以外</button>
+            </div>
+            <p style="font-size:0.8rem; color:#aaa; margin-bottom:10px;">タップして除外/解除</p>
+            <div id="detail-exclusion-grid" class="modal-grid">
+                <!-- Injected via JS -->
+            </div>
+            <button class="modal-close" onclick="closeDetailExclusionModal()">完了</button>
         </div>
     </div>
 

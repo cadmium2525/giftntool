@@ -6,8 +6,49 @@ const MONSTER_NAMES = [
     "キュービ", "シンリュウ", "デュラハン", "ユグドラシル", "キジン", "メタルナー", "ゴースト", "イルミネ", "アーク"
 ];
 
-// 属性「ノーブル」を持つモンスター名
+// 属性「ノーブル」を持つモンスター名（血統データタブのノーブル列と連動）
+// ※この配列は血統データタブで動的に管理される（後方互換のため残す）
 const NOBLE_MONSTER_NAMES = ["ハム", "ピクシー", "アーク"];
+
+// 血統データ：オーラ（赤・青・黄・緑・白・黒）とノーブル属性
+// ユーザーが所持しているものにチェックを入れる想定
+const AURA_LABELS = ['赤', '青', '黄', '緑', '白', '黒', 'ノーブル'];
+
+const DEFAULT_BLOODLINE_DATA = {
+    'ピクシー':    { 赤:true,  青:true,  黄:true,  緑:false, 白:true,  黒:false, ノーブル:true  },
+    'ドラゴン':    { 赤:true,  青:true,  黄:false, 緑:false, 白:false, 黒:true,  ノーブル:false },
+    'ケンタウロス':{ 赤:false, 青:false, 黄:false, 緑:true,  白:true,  黒:true,  ノーブル:false },
+    'ヘンガー':    { 赤:false, 青:false, 黄:false, 緑:false, 白:true,  黒:false, ノーブル:false },
+    'ゴーレム':    { 赤:false, 青:true,  黄:false, 緑:true,  白:true,  黒:true,  ノーブル:false },
+    'ディノ':      { 赤:false, 青:false, 黄:true,  緑:false, 白:false, 黒:false, ノーブル:false },
+    'アローヘッド':{ 赤:true,  青:false, 黄:true,  緑:true,  白:false, 黒:false, ノーブル:false },
+    'ライガー':    { 赤:true,  青:false, 黄:false, 緑:false, 白:true,  黒:false, ノーブル:false },
+    'ハム':        { 赤:true,  青:false, 黄:true,  緑:true,  白:false, 黒:false, ノーブル:true  },
+    'ガリ':        { 赤:true,  青:false, 黄:false, 緑:true,  白:true,  黒:false, ノーブル:false },
+    'グジラ':      { 赤:true,  青:false, 黄:false, 緑:false, 白:true,  黒:false, ノーブル:false },
+    'ニャー':      { 赤:true,  青:false, 黄:false, 緑:false, 白:true,  黒:true,  ノーブル:true  },
+    'ヒノトリ':    { 赤:false, 青:true,  黄:false, 緑:false, 白:true,  黒:true,  ノーブル:false },
+    'スエゾー':    { 赤:false, 青:false, 黄:true,  緑:false, 白:true,  黒:false, ノーブル:false },
+    'モッチー':    { 赤:true,  青:true,  黄:false, 緑:true,  白:false, 黒:true,  ノーブル:false },
+    'ジョーカー':  { 赤:false, 青:false, 黄:true,  緑:false, 白:false, 黒:true,  ノーブル:false },
+    'ネンドロ':    { 赤:false, 青:true,  黄:true,  緑:false, 白:false, 黒:false, ノーブル:false },
+    'ゲル':        { 赤:false, 青:false, 黄:true,  緑:false, 白:true,  黒:true,  ノーブル:false },
+    'ウンディーネ':{ 赤:false, 青:true,  黄:false, 緑:true,  白:true,  黒:true,  ノーブル:false },
+    'プラント':    { 赤:false, 青:false, 黄:true,  緑:true,  白:false, 黒:false, ノーブル:false },
+    'モノリス':    { 赤:true,  青:true,  黄:true,  緑:false, 白:true,  黒:true,  ノーブル:false },
+    'ワーム':      { 赤:false, 青:true,  黄:false, 緑:true,  白:false, 黒:false, ノーブル:false },
+    'ナーガ':      { 赤:false,  青:true,  黄:true,  緑:false, 白:false, 黒:false, ノーブル:false },
+    'カワズモー':  { 赤:false, 青:false, 黄:true,  緑:false, 白:false, 黒:false, ノーブル:false },
+    'キュービ':    { 赤:true,  青:false, 黄:true,  緑:true,  白:true,  黒:false, ノーブル:false },
+    'シンリュウ':  { 赤:false, 青:true,  黄:true,  緑:false, 白:false, 黒:false, ノーブル:false },
+    'デュラハン':  { 赤:false, 青:false, 黄:true,  緑:true,  白:false, 黒:true,  ノーブル:false },
+    'ユグドラシル':{ 赤:false, 青:false, 黄:false, 緑:true,  白:false, 黒:false, ノーブル:false },
+    'キジン':      { 赤:false, 青:false, 黄:false, 緑:true,  白:false, 黒:true,  ノーブル:false },
+    'メタルナー':  { 赤:false, 青:false, 黄:true,  緑:false, 白:false, 黒:false, ノーブル:false },
+    'ゴースト':    { 赤:false, 青:false, 黄:false, 緑:true,  白:false, 黒:false, ノーブル:false },
+    'イルミネ':    { 赤:true,  青:false, 黄:false, 緑:false, 白:false, 黒:false, ノーブル:false },
+    'アーク':      { 赤:false, 青:false, 黄:true,  緑:false, 白:false, 黒:true,  ノーブル:true  },
+};
 
 // 初期ノーブルデータ (★1〜★36)
 const DEFAULT_NOBLE_DATA = {
